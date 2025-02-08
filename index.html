@@ -1,8 +1,9 @@
 ---
 layout: page
-description: "「离开世界之前 一切都是过程」"
+description: >-
+  “To understand a sentence means to understand a language. To understand a
+  language means to be master of a technique.”
 ---
-
 {% for post in paginator.posts %}
 <div class="post-preview">
     <a href="{{ post.url | prepend: site.baseurl }}">
@@ -26,7 +27,7 @@ description: "「离开世界之前 一切都是过程」"
         Posted by {% if post.author %}{{ post.author }}{% else %}{{ site.title }}{% endif %} on {{ post.date | date: "%B %-d, %Y" }}
     </p>
 </div>
-<hr>
+<hr />
 {% endfor %}
 
 <!-- Pager -->
