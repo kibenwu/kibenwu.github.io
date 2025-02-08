@@ -1,10 +1,9 @@
 ---
 title: Archive
 layout: default
-description: "「我干了什么 究竟拿了时间换了什么」"
-header-img: "img/bg-little-universe.jpg"
+description: “A man learns only by believing something.”
+header-img: img/bg-little-universe.jpg
 ---
-
 <!--
 Credits: this page shamelessly borrowed a lot from:
 https://github.com/kitian616/jekyll-TeXt-theme
@@ -25,9 +24,7 @@ https://github.com/kitian616/jekyll-TeXt-theme
 
 				{% capture tags %}
 				{% for tag in site.tags %}
-				<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}"
-					data-encode="{{ tag[0] | strip | url_encode }}" class="tag-button" title="{{ tag[0] }}"
-					rel="{{ tag[1].size }}">
+				<a data-sort="{{ site.posts.size | minus: tag[1].size | prepend: '0000' | slice: -4, 4 }}" data-encode="{{ tag[0] | strip | url_encode }}" class="tag-button" title="{{ tag[0] }}" rel="{{ tag[1].size }}">
 					{{ tag[0] }}
 					<sup>{{tag[1].size}}</sup>
 				</a>__SEPERATOR__
@@ -57,7 +54,7 @@ https://github.com/kitian616/jekyll-TeXt-theme
 				{% comment %} group by year {% endcomment %}
 				{%- assign _currentdate = _article.date | date: '%Y' -%}
 				{%- if _currentdate != _date -%}
-				{%- unless forloop.first -%}</section>{%- endunless -%}
+				{%- unless forloop.first -%}{%- endunless -%}
 				<section>
 					<span class="fa listing-seperator">
 						<span class="tag-text">{{ _currentdate }}</span>
@@ -76,7 +73,7 @@ https://github.com/kitian616/jekyll-TeXt-theme
 							</h3>
 							{% endif %}
 						</a>
-						<hr>
+						<hr />
 					</div>
 					{%- if forloop.last -%}
 				</section>{%- endif -%}
