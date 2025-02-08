@@ -1,59 +1,93 @@
+_schema: _schema
+paths:
+  uploads: uploads
+  static: ''
 collections_config:
   pages:
     path: ''
     name: Pages
     icon: wysiwyg
+    disable_url: false
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
   drafts:
     path: _drafts
     name: Drafts
     icon: event
-    create:
-      path: ''
-      publish_to: posts
+    disable_url: false
     _inputs:
       categories:
         type: multiselect
         options:
-          values: collections.posts[*].categories
           allow_create: true
+          empty_type: array
+          values: collections.posts[*].categories
+        cascade: true
       tags:
         type: multiselect
         options:
-          values: collections.posts[*].tags
           allow_create: true
+          empty_type: array
+          values: collections.posts[*].tags
+        cascade: true
+    create:
+      path: ''
+      publish_to: posts
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
   posts:
     path: _posts
     name: Posts
     icon: event_available
-    create:
-      path: >-
-        [relative_base_path]/{date|year}-{date|month}-{date|day}-{title|slugify}.[ext]
+    disable_url: false
     _inputs:
       categories:
         type: multiselect
         options:
-          values: collections.posts[*].categories
           allow_create: true
+          empty_type: array
+          values: collections.posts[*].categories
+        cascade: true
       tags:
         type: multiselect
         options:
-          values: collections.posts[*].tags
           allow_create: true
+          empty_type: array
+          values: collections.posts[*].tags
+        cascade: true
     add_options:
       - name: Add Post
       - name: Add Draft
         collection: drafts
-paths:
-  static: ''
-  uploads: uploads
+    create:
+      path: >-
+        [relative_base_path]/{date|year}-{date|month}-{date|day}-{title|slugify}.[ext]
+    disable_add: false
+    disable_add_folder: false
+    disable_file_actions: false
+_snippets_imports:
+  jekyll: true
 timezone: Asia/Shanghai
 markdown:
   engine: kramdown
   options:
-    heading_ids: false
-    gfm: true
+    xhtml: false
     breaks: false
+    linkify: false
     typographer: true
+    spaced_lists: false
+    sentence_per_line: false
+    gfm: true
+    code_block_fences: '```'
+    escape_snippets_in_code_blocks: false
+    treat_indentation_as_code: true
+    table: false
+    strikethrough: false
+    subscript: false
+    superscript: false
+    heading_ids: false
     attributes: true
     attribute_elements:
       inline: right
@@ -61,6 +95,3 @@ markdown:
       tr: none
       td: none
       li: right-of-prefix
-    treat_indentation_as_code: true
-_snippets_imports:
-  jekyll: true
