@@ -1,4 +1,4 @@
-**Hey, I’m Wu Liang**, an emotional clown immersed in logical chains. I love coding, reading philosophy, and dreaming about poetry and distant places.
+**Hey, I’m Kiven Wu**, an emotional clown immersed in logical chains. I love coding, reading philosophy, and dreaming about poetry and distant places.
 
 I’ve been in the game industry for over 15 years, having worked on various projects big and small. Yet, I still hold onto my passion for making games. That’s why I spend my spare time working on indie projects—one of which is now available on **Steam**! Feel free to **add it to your wishlist or purchase it**. I’d really appreciate the support!
 
