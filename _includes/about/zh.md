@@ -10,10 +10,12 @@ Hey，我是吴亮，一个沉浸在逻辑链条中的感性小丑，喜欢写�
 
 [**Seaquest Dungeon**](https://store.steampowered.com/app/3157890/SeaQuestDungeon/)
 
-![](/uploads/920x430-demo-形象图片.jpg)
+![](/uploads/462x174-小宣传图.jpg)
 
 [**GridFiller**](https://store.steampowered.com/app/3481670/GridFiller/)
 
-![](/uploads/920x430-形象图片.png)
+![](/uploads/462x174-小宣传图.png)
 
-\#####
+&nbsp;
+
+&nbsp;
