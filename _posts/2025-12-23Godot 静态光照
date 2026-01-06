@@ -1,0 +1,59 @@
+---
+layout: post
+title: 'UE5 Project Settings '
+subtitle: Thinking in React vs. Thinking in Vue
+author: Hux
+header-style: text
+tags:
+  - 知乎
+  - Web
+  - React
+---
+# 如何为场景打光
+
+
+我最近在试用 Godot 的光照贴图器 (Lightmapper)，并制作了一些简单的场景。:contentReference[oaicite:1]{index=1}
+
+![室内光照示例1](turn0image0)
+
+很多人问我是如何设置光照的。我的方法是：添加一个 **LightmapGI 节点**，然后点击 **Bake（烘焙）**！:contentReference[oaicite:2]{index=2}
+
+## 为什么使用光照贴图？
+
+光照贴图自游戏诞生以来就存在，并且短期内看起来不会消失。尽管像 Lumen 那样的实时全局光照很强大，但它非常“吃性能”。RTX 显卡可以在桌面上实时渲染 GI，但在独立 XR 头显这样的小设备上无法使用，因为它需要大量电力并且会发热。:contentReference[oaicite:3]{index=3}
+
+## 室内场景
+
+我用 Blender 制作了一个简单的室内场景：:contentReference[oaicite:4]{index=4}
+
+![室内光照示例2](turn0image2)
+
+这个场景类似第一人称走廊。为了简化，我完全用 glTF 内的自发光表面来照明，而没有添加任何光源节点。:contentReference[oaicite:5]{index=5}
+
+由于没有环境光，未被照亮的部分保持完全黑暗，这样就不会产生光泄漏。:contentReference[oaicite:6]{index=6}
+
+添加 LightmapGI 节点并烘焙后：:contentReference[oaicite:7]{index=7}
+
+![室内光照条纹问题](turn0image7)
+
+你会看到一些边缘附近有难看的光条纹，因为光照贴图分辨率太低。:contentReference[oaicite:8]{index=8}
+
+### 修复方法
+
+降低光照贴图的 **texel scale** 或者提高分辨率可以去掉这些条纹。:contentReference[oaicite:9]{index=9}
+
+## 室外场景
+
+以下是一个简单的户外 glTF 场景：:contentReference[oaicite:10]{index=10}
+
+![户外场景示例](turn0image1)
+
+在 Godot 中启用太阳光和环境光预览后效果如下：:contentReference[oaicite:11]{index=11}
+
+![户外预览示例](turn0image4)
+
+如果直接用默认设置烘焙光照贴图，效果很糟糕，还会出现阴影泄漏问题。:contentReference[oaicite:12]{index=12}
+
+## 总结
+
+这是使用简单几何体在 Godot 中实现光照贴图的基本流程。你可以根据项目需求，自由调整参数、添加体积雾、开启 bloom 等效果来创造丰富的光照风格。:contentReference[oaicite:13]{index=13}
