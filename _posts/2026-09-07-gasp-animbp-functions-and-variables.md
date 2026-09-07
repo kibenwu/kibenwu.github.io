@@ -881,7 +881,7 @@ Enable_AO
 
 ---
 
-# 第六部分：辅助判定函数
+# 第六部分：辅助判定与查询函数
 
 ## 6.1 IsMoving
 
@@ -926,6 +926,102 @@ IsStarting
 
 这是 3.3 节 `TrjFutureVelocity` 价值的最直接体现：**不需要状态机，不需要记录「上一帧是不是站着」，一个比较就判出了起步。**
 
+## 6.3 Blend Stack 查询三件套
+
+前面反复出现、但一直没单独讲的三个函数：
+
+```text
+GetCurrentBlendStackAnimAsset(Node)      → 栈顶正在播的 AnimSequence
+GetCurrentBlendStackAnimAssetTime(Node)  → 它当前播到第几秒
+GetCurrentBlendStackAnimIsActive(Node)   → 它是否仍然活跃（没被淡出取代）
+```
+
+三个都要求传入 `MMBlendStackInput`（Anim Node Reference）。出现的位置：
+
+| 调用点 | 用到哪个 | 目的 |
+|---|---|---|
+| Orientation Warping（5.2） | Asset + Time | 采样该动画的 `Enable_Warping` 曲线 |
+| Steering ×2（5.3） | Asset + Time | 计算动画自带 root motion 还能提供多少转向 |
+| `EnableSteering`（5.3） | IsActive | 栈顶已淡出就别再以它为基准 |
+
+**为什么后处理层需要知道「现在在播哪个动画、播到第几秒」？**
+
+因为它们的行为要跟着**具体资产**走，而不是跟着状态走：
+
+- Warping 要读那个动画自己声明的授权曲线
+- Steering 要知道动画自带旋转还剩多少，才能决定程序化部分补多少
+
+**这三个函数是 Blend Stack 与后处理层之间唯一的接口。** 没有它们，后处理只能对混合后的结果盲目动手 —— 而混合结果是好几个动画的加权平均，读不出任何一个动画的曲线。
+
+同族的还有一个：
+
+```text
+Convert to Motion Matching Node(Node) → MotionMatchingNode
+```
+
+把泛型 Anim Node Reference 转成 Motion Matching 专用引用。`Update_PoseSearch` 和 `Update_MotionMatchingPoseSelection` 开头都要先做这一步，之后才能调 `Set Databases to Search` 和 `Get Motion Matching Search Result`。
+
+## 6.4 Slot 查询二人组
+
+| 函数 | 返回 | 用在 | 为什么用这个粒度 |
+|---|---|---|---|
+| `IsSlotActive("DefaultSlot")` | bool | Offset Root 的两个 Mode（5.4） | 根骨要**立刻**切模式，不需要过渡 |
+| `GetSlotLocalWeight("DefaultSlot")` | float，与 0.5 比 | `Enable_AO`（5.7） | AO 要在蒙太奇**淡入过程中**就开始退场 |
+
+同一个 Slot，两种粒度。
+
+**选布尔还是选权重，取决于「这个响应需不需要过渡」。** 布尔是阶跃，蒙太奇一开始播就立刻生效；权重是连续量，可以在混合过程中提前介入。
+
+这个区分在自己搭系统时很容易忽略 —— 一律用 `IsSlotActive` 会导致所有叠加层在蒙太奇起播那一帧同时突变。
+
+## 6.5 两个数值防护函数
+
+```text
+SafeDivide(A, B)          用在 AccelerationAmount（3.4 组二）
+MAX(DeltaSeconds, 0.001)  用在 VelocityAcceleration（3.4 组四）
+```
+
+两处都是除法保护，但值得再强调一次原因：
+
+**AnimBP 里的 NaN 不会报错，只会静默污染。** 一个 NaN 进入 pose search 的代价计算，结果是所有候选的 Cost 都变成 NaN，比较全部失败，MM 随机选一个 —— 表现为「动画偶发性抽风」，而 Output Log 干干净净。
+
+**凡是分母来自外部数据（角色属性、DeltaTime）的除法，一律加保护。** 这不是防御性编程过度，是这个环境里排查成本极高的一类 bug。
+
+## 6.6 被绑定但没有截图的三个函数
+
+以下三个在图里出现为绑定项或调用节点，但内部结构没有单独截图。这里给出**从命名、同族函数和数据依赖推断的形态**，实机需要打开确认。
+
+### `Get_MMBlendTime`
+
+绑在 Motion Matching 节点的 `Blend Time`（4.1）。
+
+与 `Get_MMNotifyRecencyTimeOut` 是同一个绑定位置的邻居，极可能也是 `Select`：按 `Gait` 或 `MovementState` 分档，**低速长、高速短**。
+
+理由与 4.2 节相同 —— 高速时同样的混合时长会跨越更大的动作幅度，混合痕迹更明显。
+
+### `Get_FootPlacementPlantSettings`
+
+绑在 Foot Placement 的 `Plant Settings`（5.5），与已截图的 `Get_FootPlacementInterpolationSettings` 是同一个节点上的兄弟引脚。
+
+大概率同构：读 `CurrentDatabaseTags` 分档。`Stops` / `Pivots` 这类脚步需要「踩死」的动画用更强的 plant，循环移动用较松的。
+
+### `CalculateRelativeAccelerationAmount`
+
+被 `Get_LeanAmount` 调用（5.6），取其 `.Y` 分量。
+
+从名字拆：`Relative`（本地空间）+ `Acceleration`（加速度）+ `Amount`（归一化量）。所以它做的是**把 `RelativeAcceleration` 归一化到 [-1, 1]**。
+
+关键推断：**归一化的分母是分方向的。**
+
+```text
+加速方向 → 除以 CurrentMaxAcceleration
+减速方向 → 除以 CurrentMaxDeceleration
+```
+
+**这解释了 `CharacterProperties` 里为什么会有 `CurrentMaxDeceleration` 这个乍看多余的字段**（2.2 节）—— 加速和减速的上限本来就不一样，用同一个分母归一化会导致刹车时的倾斜量算错。
+
+如果只用一个上限，急刹车（减速度远大于加速度上限）会算出远超 1 的值，倾斜直接打满穿帮。
+
 ---
 
 # 第七部分：总表
@@ -959,6 +1055,9 @@ IsStarting
 | **Lean** | `Get_LeanAmount` / `CalculateRelativeAccelerationAmount` | Blendspace 绑定 |
 | **Aim Offset** | `Get_AOValue` / `Get_Ao_Yaw` / `Enable_AO` | Blendspace / Blend 节点绑定 |
 | **判定** | `IsMoving` / `IsStarting` | 被上面各类调用 |
+| **Blend Stack 查询** | `GetCurrentBlendStackAnimAsset` / `...AnimAssetTime` / `...AnimIsActive` / `Convert to Motion Matching Node` | Warping / Steering / MM 回调 |
+| **Slot 查询** | `IsSlotActive` / `GetSlotLocalWeight` | Offset Root / Enable_AO |
+| **数值防护** | `SafeDivide` / `MAX` | UpdateEssentialValues |
 
 ---
 
