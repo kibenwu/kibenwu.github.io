@@ -19,7 +19,9 @@ tags:
 
 这一篇讲**实现**：打开 `ABP_MasterMM`，里面那几十个变量和函数各自是干什么的、谁调谁、绑到哪个节点上。
 
-全部截图来自 `ABP_MasterMM` 及其父级/子图。文中给出的数值都是资产里的实际值，不是推荐值。
+截图主要来自 `ABP_MasterMM` 及其父级/子图，少量来自 `SandboxCharacter_CMC_ABP`（判定函数散落在多个 ABP 里）。文中给出的数值都是资产里的实际值，不是推荐值。
+
+引擎自带的函数注释（图上那些灰色文字块）我尽量原文引用了 —— 有几处它写明的理由和从图上推出来的不一样，那些地方单独标了出来。也有一处注释和实际接线不符（6.1 节），同样保留。
 
 ---
 
@@ -101,18 +103,27 @@ CharacterProperties
 ├── Stance                     EStance
 ├── RotationMode               ERotationMode
 ├── Gait                       EGait
-└── MovementDirection          EMovementDirection
+├── MovementDirection          EMovementDirection
+├── JustLanded                 bool，落地那一帧由 C++ 置位
+└── LandVelocity               Vector，落地瞬间的速度（用 Z 判轻重）
 ```
+
+> 后两个字段在最初那张 Break 图里被折叠了，是从 `JustLanded_Light` / `JustLanded_Heavy`（7.6 节）的 Break 节点上补出来的。**Break 结构体节点默认会隐藏没连线的引脚**，所以从单张图推断结构体的完整字段并不可靠。
 
 分成三类看：
 
 | 类别 | 字段 | 用途 |
 |---|---|---|
-| **连续量** | Velocity / InputAcceleration / ActorTransform / GroundLocation / AimingRotation / BasedMovementDelta | 喂 Trajectory、算派生量、驱动 Warping 和 AO |
+| **连续量** | Velocity / InputAcceleration / ActorTransform / GroundLocation / AimingRotation / BasedMovementDelta / LandVelocity | 喂 Trajectory、算派生量、驱动 Warping 和 AO |
 | **上限量** | CurrentMaxAcceleration / CurrentMaxDeceleration | 做**归一化**用 —— 把绝对加速度变成 0~1 |
 | **离散枚举** | MovementMode / Stance / RotationMode / Gait / MovementDirection | 喂 Chooser 选库 |
+| **瞬时标志** | JustLanded | 只在事件发生那一帧为真 |
 
 **上限量的存在是关键。** 有了 `CurrentMaxAcceleration`，`AccelerationAmount` 才能是 0~1 的归一化值 —— 换个移动参数不同的角色，动画表现不会跟着变。这是「让动画层与移动参数解耦」的标准做法。
+
+`CurrentMaxDeceleration` 乍看是个冗余字段，直到 6.6 节 `CalculateRelativeAccelerationAmount` 才用上：**加速和刹车必须用各自的上限归一化**，共用一个分母会让刹车时的身体倾斜量算错。
+
+**瞬时标志这一类只有一个成员，但它代表了一种蓝图侧算不出来的信息。** 「刚刚落地」是一个发生在物理帧的事件，动画蓝图只能看到 `MovementMode` 的前后差异，推不出撞击强度。**这类信息必须由 C++ 侧在事件发生时抓下来塞进结构体。**
 
 ---
 
@@ -346,6 +357,16 @@ RotationMode       / RotationModeLastFrame
 
 离散枚举的 `LastFrame` 是给「进入/离开某状态的那一帧」用的 —— 起播特定动画、重置计时器、触发一次性逻辑。状态机方案里这类判断由状态转移天然提供；**MM 方案没有状态机，就必须自己维护这份快照**。
 
+**这套变量最终喂给了三个地方**，看完它们才能理解为什么值得维护这么一大堆冗余数据：
+
+| 消费者 | 用法 | 章节 |
+|---|---|---|
+| `Get_MMInterruptMode` | 四组状态任一跳变 → 强制打断 MM 的连贯性偏好 | 4.6 |
+| `Get_MMBlendTime` | `MovementMode` 从 InAir 变 OnGround → 缩短混合时长 | 6.6 |
+| `ShouldTurnInPlace` | `MovementState` 从 Moving 变 Idle → 允许 Stick Flick 转身 | 7.3 |
+
+三者的共同形状是 `当前 == A AND 上一帧 == B`，或者 `当前 != 上一帧`。**没有状态机，边沿就得靠这种笨办法造出来。**
+
 > 复刻建议：这个模式很容易漏掉某一组，导致某个边沿检测永远不触发。建议把这批赋值全部集中在 `UpdateState` 一处，不要散落在各个函数里。
 
 ---
@@ -367,6 +388,8 @@ Motion Matching 节点
 
 **两个属性用绑定而不是常量**，意味着它们每帧都可能变。**两个事件是整个 Chooser ↔ MM 协作的挂载点。**
 
+第三个可变参数 `Interrupt Mode` 在 `Update_PoseSearch` 里作为 `Set Databases to Search` 的入参传入，不是节点上的绑定引脚 —— 见 4.6 节。
+
 ## 4.2 Notify Recency Time Out
 
 [![](/img/in-post/gasp-abp/28-mm-notify-recency.png)](/img/in-post/gasp-abp/28-mm-notify-recency.png)
@@ -385,7 +408,9 @@ Select（Index = Gait）
 
 0.2 → 0.16 是 20% 的收紧，跟步频的提升幅度大致对应。**这是一个「按运动强度缩放时间窗」的通用思路**，不只适用于这一个参数。
 
-> `Get_MMBlendTime` 没有截图，但从命名和绑定方式看是同类做法 —— 按状态返回不同的混合时长（一般是 Idle 长、高速短）。
+官方注释给的理由是同一件事的另一个说法（6.6 节末尾有补图）：这个窗口必须跟脚步声的间隔匹配，否则冲刺时相邻两声会被当成同一个 notify 去重掉。
+
+`Get_MMBlendTime` 的分档轴则完全不同 —— 不按 Gait，按 `MovementMode` 的跳变。详见 6.6 节。
 
 ## 4.3 On Update → Update_PoseSearch
 
@@ -422,6 +447,8 @@ Update_PoseSearch(Context, Node)
 选中间档的含义是：**只要 Chooser 的输出没变，MM 就享受完整的 continuing pose 优待**（上一篇讲的 `ContinuingPoseCostBias` 折扣）；一旦状态切换导致换库，立刻打断重搜。
 
 这一个设置同时解决了「响应」和「稳定」，是整套方案里性价比最高的一处配置。
+
+> 这张图里 `Interrupt Mode` 是写死的字面量。工程里另有一个 `Get_MMInterruptMode` 函数，把这个选择变成了每帧动态计算 —— **默认不打断，只在核心状态跳变的那一帧才打断**。那是比写死更进一步的做法，见 4.6 节。
 
 **③ `ChooserPlayerSettings` 是第二路输出。** Chooser 不只吐数据库，还能吐一个设置结构体。上一篇提到的 OutputStruct 列类型就是干这个的 —— 让「选库」和「选参数」在同一次求值里完成，保证两者一致。
 
@@ -462,9 +489,10 @@ Update_MotionMatchingPoseSelection(Context, Node)
 
 ```text
 CurrentDatabaseTags
-  ├── CONTAINS "TurnInPlace" ──► 切换 Steering 的 ProceduralTargetTime（4.7 节）
-  ├── CONTAINS "Stops"       ──► 切换 Foot Placement 的插值设置（5.5 节）
-  └── （可扩展：任意后处理节点的开关与参数）
+  ├── CONTAINS "TurnInPlace" ──► 切换 Steering 的 ProceduralTargetTime（5.3 节）
+  ├── CONTAINS "Stops"       ──► 切换 Foot Placement 的插值与 Plant 设置（5.5、6.6 节）
+  ├── CONTAINS "Pivots"      ──► 否决 IsStarting（6.2 节）
+  └── CONTAINS "Pivots"      ──► 否决 ShouldSpinTransition（7.4 节）
 ```
 
 **这形成了一个反馈环：**
@@ -486,6 +514,76 @@ CurrentDatabaseTags
 
 > 复刻要点：给 Database 打 Tag 几乎零成本，但要**提前规划 Tag 命名空间**。建议按「运动族」而不是按「状态」打 —— `Stops` / `Pivots` / `TurnInPlace` / `Starts`，与上一篇讲的 Database 切分维度对齐。
 
+**两个方向的用法要分清：**
+
+| 用法 | 例子 | 作用 |
+|---|---|---|
+| 调参数 | Foot Placement 的 Settings、Steering 的 TargetTime | 「在播这类动画时，后处理换一套参数」 |
+| **做否决** | `IsStarting`、`ShouldSpinTransition` 里的 `NOT Contains(Pivots)` | 「在播这类动画时，禁止某个判定成立」 |
+
+第二种是更硬的需求。它解决的是 7.7 节那个问题：**姿态相似的动作，纯数值判定必然区分不开**，只能靠"当前在播什么"来打破歧义。
+
+## 4.6 Interrupt Mode：整套 LastFrame 变量的兑现点
+
+[![](/img/in-post/gasp-abp/61-get-mm-interrupt-mode.png)](/img/in-post/gasp-abp/61-get-mm-interrupt-mode.png)
+<small class="img-hint">四组「变没变」的比较，OR 到一起</small>
+
+> This function controls the Interupt Mode of the motion matching node. This determines whether motion matching will force a blend into a new database if the selectable databases have changed, or wait until it finds a match that costs less than the currently playing animation. By default, we do not interrupt. However, whenever a core state has changed, we know we want to start playing a new animation, therefore force an interrupt. This prevents motion matching from sticking in the idle if the character has started moving, or staying in a cycle animation if the character wants to stop, which can happen based on the "continuing pose bias" tuning. Essentially, this keeps motion matching responsive to changes in core states.
+
+```text
+Get_MMInterruptMode
+  anyCoreStateChanged =
+        ( MovementState != MovementStateLastFrame )
+     OR ( Gait    != GaitLastFrame    AND MovementState == Moving )
+     OR ( MovementMode != MovementModeLastFrame )
+     OR ( Stance  != StanceLastFrame  AND MovementMode  == OnGround )
+
+  return anyCoreStateChanged ? Interrupt on Database Change
+                             : Do Not Interrupt
+```
+
+**3.6 节讲的那一堆 `XxxLastFrame` 变量，最大的一个消费者就是这里。**
+
+### 它在解决什么
+
+Motion Matching 有个叫 **continuing pose bias** 的调参：给"继续播当前动画"一个代价折扣，防止每帧乱跳。这个折扣调得越狠，动画越连贯，但也越"粘"。
+
+粘的后果是：**玩家已经开始跑了，MM 还赖在 idle 里** —— 因为继续播 idle 的折扣后代价，仍然低于切到跑步的代价。
+
+Interrupt Mode 就是这个矛盾的出口：
+
+| 模式 | 行为 |
+|---|---|
+| `Do Not Interrupt` | 等到真找到更便宜的匹配才切。连贯，但可能滞后 |
+| `Interrupt on Database Change` | 库一变就强制混过去，不比代价 |
+
+**默认不打断，只在核心状态发生跳变的那一帧打断。**
+
+逻辑很直白：状态没变，说明玩家意图没变，让 MM 按代价慢慢选，优先连贯；状态变了，说明玩家做了个新决定，**这时候连贯性要给响应性让路**。
+
+### 两个带门的条件
+
+四项里有两项加了额外限制，这是细节所在：
+
+```text
+Gait   变了  →  还要求 MovementState == Moving
+Stance 变了  →  还要求 MovementMode  == OnGround
+```
+
+**站着不动时切换走/跑档位，不该打断 idle。** Gait 是个"准备状态"，玩家可以站着预切成 Sprint 再起跑 —— 那一刻动画不该有任何反应。
+
+**空中切换蹲/站，不该打断跳跃。** 同理，蹲伏姿态在空中没有意义，等落地再说。
+
+**没有这两个门，会出现「站着按一下冲刺键，角色抖一下」这种典型 bug。** 状态确实变了，但那个变化在当前情境下不该产生动画反应。
+
+这条经验可以推广：**「状态变了」不等于「该换动画了」，中间还差一个「这个变化在当前情境下有没有视觉意义」的判断。**
+
+### 为什么必须是 LastFrame 而不是事件
+
+这四项全部是 `当前值 != 上一帧值`。用委托或事件回调也能知道状态变了，但会碰到时序问题：**事件可能在这一帧的动画更新之前或之后到达**，而 MM 需要的是"就在这一帧，状态是不是刚变的"。
+
+存一份上一帧的副本，在 `UpdateState` 里统一比较，**时序完全确定**，不依赖事件的到达顺序。这是 3.6 节那套看起来笨拙的双份变量真正的价值。
+
 ---
 
 # 第五部分：姿态链上的节点与绑定函数
@@ -505,6 +603,20 @@ Pose History（节点标签 PoseHistory）
 只有一个引脚，但**没有它 MM 就完全无法工作** —— 查询向量里的「历史姿态」部分全部来自这里。
 
 节点标签 `PoseHistory` 要和 Schema 里配置的名称一致，这是上一篇 `FLT_MAX` 七步排查里的第 6 步。
+
+配套有一个取引用的函数：
+
+[![](/img/in-post/gasp-abp/63-get-pose-history-reference.png)](/img/in-post/gasp-abp/63-get-pose-history-reference.png)
+<small class="img-hint">和 MM 节点取引用是同一个套路</small>
+
+```text
+Get_PoseHistoryReference
+  = Get Pose History Reference( Convert to Pose History Node(PoseHistory) )
+```
+
+**「先 Convert，再取 Reference」是引擎里访问 AnimNode 的固定两步。** `Convert to XXX Node` 把泛型 Anim Node Reference 转成具体类型（附带一个 `Result` 分支引脚用于失败处理），转完才能调该类型专属的接口。
+
+`Update_PoseSearch` 里的 `Convert to Motion Matching Node` 是同一个模式。**看到 `Convert to ...` 就知道下面要访问某个 AnimNode 的内部状态了。**
 
 ## 5.2 Blend Stack 内部：Orientation Warping
 
@@ -555,15 +667,23 @@ GetCurrentBlendStackAnimAsset(Node)
 
 **④ Warping Space 也是绑定的：**
 
-[![](/img/in-post/gasp-abp/30-orientation-warping-space.png)](/img/in-post/gasp-abp/30-orientation-warping-space.png)
+[![](/img/in-post/gasp-abp/55-orientation-warping-space-doc.png)](/img/in-post/gasp-abp/55-orientation-warping-space-doc.png)
 <small class="img-hint">开了 Offset Root Bone 就以根骨为参考系，否则用组件</small>
 
 ```text
 Get_OrientationWarpingWarpingSpace
-  = OffsetRootBoneEnable ? RootBoneTransform : ComponentTransform
+  = OffsetRootBoneEnabled ? RootBoneTransform : ComponentTransform
 ```
 
-因为 Offset Root Bone 会让根骨与组件产生偏差。开启时如果 Warping 还以组件为参考，两个系统就会互相打架 —— 一个把人往左偏，另一个以为人没偏又往左偏一次。
+官方注释：
+
+> Orientation Warping uses Offset Root Bone's root orientation as its warping space when it's enabled. When warping mode is in Component mode, we assume root bone is identity.
+
+后半句是关键：**Component 模式下的前提假设是「根骨等于单位变换」。**
+
+也就是说，两个分支不是"两种都行，选一个"，而是**同一个假设的两种成立方式**：要么根骨真的没偏（没开 Offset Root），要么就得显式告诉 Warping 根骨偏到哪了。
+
+开了 Offset Root 却还用 Component 模式，等于是在一个已经不成立的假设上做计算 —— 两个系统会互相打架，一个把人往左偏，另一个以为人没偏又往左偏一次。
 
 ## 5.3 Steering ×2
 
@@ -668,7 +788,7 @@ Offset Root Bone（节点标签 OffsetRoot）
 
 ### Rotation Mode
 
-[![](/img/in-post/gasp-abp/22-offsetroot-rotation-mode.png)](/img/in-post/gasp-abp/22-offsetroot-rotation-mode.png)
+[![](/img/in-post/gasp-abp/51-offsetroot-rotation-mode-doc.png)](/img/in-post/gasp-abp/51-offsetroot-rotation-mode-doc.png)
 <small class="img-hint">播蒙太奇时立刻归位</small>
 
 ```text
@@ -676,32 +796,53 @@ Get_OffsetRootRotationMode
   = IsSlotActive("DefaultSlot") ? Release : Accumulate
 ```
 
-`Accumulate` 允许根骨旋转持续偏离；`Release` 主动收敛回胶囊体。
+官方注释把两个枚举的语义说清楚了：
+
+> The Release Enum essentially blends out any offset, after which it will be locked to the capsule rotation, just as it would be without a root offset node.
+>
+> The Accumulate Enum means the root will counter-rotate any changes to the capsule rotation, making it appear to rotate independently from the capsule, which allows root motion and steering to fully control its rotation.
+
+**`Accumulate` 的机制值得注意：它是「反向抵消胶囊体的旋转变化」。**
+
+不是"允许偏移增长"这么被动 —— 胶囊体每转一度，根骨就反向转一度，净效果是**根骨在世界空间里纹丝不动**。于是根骨的朝向完全交给 root motion 和 Steering 决定，胶囊体怎么转都不影响它。
+
+`Release` 则是退化成"没有这个节点"的状态：偏移混掉，根骨锁死在胶囊体上。
 
 **只要 DefaultSlot 上有蒙太奇在播，立刻切 Release。** 因为蒙太奇（技能、交互、受击）通常有精确的朝向要求，不能让根骨还挂着一个历史累计的偏移。
 
 ### Translation Mode
 
-[![](/img/in-post/gasp-abp/23-offsetroot-translation-mode.png)](/img/in-post/gasp-abp/23-offsetroot-translation-mode.png)
+[![](/img/in-post/gasp-abp/52-offsetroot-translation-mode-doc.png)](/img/in-post/gasp-abp/52-offsetroot-translation-mode-doc.png)
 <small class="img-hint">三层判断：Slot → MovementMode → IsMoving</small>
 
 ```text
 Get_OffsetRootTranslationMode
   IsSlotActive("DefaultSlot") ──► Release
   否则 Switch on EMovementMode:
-    On Ground ──► IsMoving() ? Interpolate : Release
-    In Air    ──► Release
-    Sliding   ──► （按同样思路配置）
+    On Ground  ──► IsMoving() ? Interpolate : Release
+    In Air     ──► Release
+    Sliding    ──► （未接线，走默认）
+    Traversing ──► （未接线，走默认）
 ```
 
-只有**站在地上且正在移动**时才用 `Interpolate`（允许平滑偏移）。其余情况一律 `Release`：
+官方注释：
+
+> The Interpolate Enum means the root is allowed to deviate slightly from the capsule location based on root motion, but will always try to interpolate back toward center. This is helpful when the animation data and capsule movement are not perfectly matched, such as during starts, pivots, and other complex movements.
+
+**`Interpolate` 的定位说得很准：它是在给「动画位移和胶囊体位移对不上」这件事兜底。**
+
+起步、转向这些动作，动画里的位移曲线不可能和 CMC 算出来的胶囊体位移完全一致。硬锁在一起就会脚滑，完全放开又会人和碰撞体分家。Interpolate 允许小幅偏离 + 持续往回收，是这两者之间的折中。
+
+只有**站在地上且正在移动**时才用它。其余情况一律 `Release`：
 
 - 空中：没有脚步需要防滑，偏移只会让落地位置看起来不对
 - 地面静止：站着不动却有位移偏移，视觉上就是「人和碰撞体分家」
 
+顺带确认 `EMovementMode` 枚举有四项：`On Ground` / `In Air` / `Sliding` / `Traversing`。后两项在这个函数里没接线。
+
 ### 两个数值参数
 
-[![](/img/in-post/gasp-abp/24-offsetroot-halflife.png)](/img/in-post/gasp-abp/24-offsetroot-halflife.png)
+[![](/img/in-post/gasp-abp/53-offsetroot-halflife-doc.png)](/img/in-post/gasp-abp/53-offsetroot-halflife-doc.png)
 <small class="img-hint">Idle 快速归位，Moving 慢速跟随</small>
 
 ```text
@@ -710,16 +851,24 @@ Get_OffsetRootTranslationHalfLife
   Moving → 0.3     慢速跟随
 ```
 
-半衰期 = 偏移量衰减一半所需时间。Idle 时 0.1 秒是「赶紧回来」；Moving 时 0.3 秒是「慢慢跟，别打断步态」。
+> This function controls the speed at which the Root Offset node can interpolate the root bone's translation. When stopped, we want to interpolate very quickly, so that the stop always ends at the capsule's center, but when moving, we allow for slightly smoother interpolation.
 
-[![](/img/in-post/gasp-abp/25-offsetroot-radius.png)](/img/in-post/gasp-abp/25-offsetroot-radius.png)
-<small class="img-hint">最大偏移半径直接读变量，方便运行时调</small>
+半衰期 = 偏移量衰减一半所需时间。**Idle 那档的 0.1 有个明确目的：保证急停结束时根骨精确落在胶囊体中心。**
+
+这很重要 —— 停下来是玩家会盯着看的时刻，如果人站定了却和碰撞体差着几厘米，后续任何以胶囊体为基准的逻辑（交互距离、瞄准射线）都会显得不对。移动中没人会注意这点偏差，所以可以放宽到 0.3 换取平滑。
+
+[![](/img/in-post/gasp-abp/54-offsetroot-radius-doc.png)](/img/in-post/gasp-abp/54-offsetroot-radius-doc.png)
+<small class="img-hint">最大偏移半径直接读变量</small>
 
 ```text
 Get_OffsetRootTranslationRadius = OffsetRootTranslationRadius（变量直通）
 ```
 
-写成函数而不是直接绑变量，是为了留扩展位 —— 以后想按 Gait 或 Stance 分档，改函数即可，不用动 AnimGraph。**这是一个值得学的小习惯。**
+> Set the Offset Root Node's "Max Translation Error" radius from a console variable. This makes it easy to tune while playing.
+
+**这个变量的值来自控制台变量（CVar）。** 我之前猜它是"留扩展位"，实际理由更直接：**为了能在 PIE 运行中实时改。**
+
+这类"需要边跑边调"的参数，做成 CVar 比暴露在 Details 面板里有用得多 —— 改 Details 要停下来重进，改 CVar 立刻生效。手感参数尤其吃这个，因为好不好只能靠反复试。
 
 ### Clamp To Translation Velocity
 
@@ -753,6 +902,8 @@ Get_FootPlacementInterpolationSettings
 
 再次印证 4.5 节的结论：**后处理层不自己判断状态，只读 Tag。**
 
+> 这张图省略了状态机分支。完整版（含 `BlendStackInputs.Tags` 那一路）和它的孪生函数 `Get_FootPlacementPlantSettings` 一起放在 6.6 节。
+
 ## 5.6 Additive Lean
 
 [![](/img/in-post/gasp-abp/33-additive-lean.png)](/img/in-post/gasp-abp/33-additive-lean.png)
@@ -778,6 +929,8 @@ Get_LeanAmount
 拆成两个因子：
 
 **方向与强度** = `RelativeAcceleration` 的 Y 分量（本地空间侧向加速度）。左转为负、右转为正，转得越急数值越大。3.4 节的 `UnrotateVector` 就是为它服务的。
+
+（`CalculateRelativeAccelerationAmount` 的完整实现见 6.6 节 —— 它分方向用不同的上限做归一化，这是 `CurrentMaxDeceleration` 唯一的用武之地。）
 
 **速度缩放** = 慢速时 ×0.5，375 单位/秒以上 ×1.0。**同样的转向输入，走路只倾斜一半，冲刺才倾斜到底。** 符合物理直觉（离心力与速度平方相关），也避免走路时倾斜过头显得滑稽。
 
@@ -885,39 +1038,50 @@ Enable_AO
 
 ## 6.1 IsMoving
 
-[![](/img/in-post/gasp-abp/26-is-moving.png)](/img/in-post/gasp-abp/26-is-moving.png)
-<small class="img-hint">三个「不等于零」的容差比较</small>
+[![](/img/in-post/gasp-abp/38-is-moving-full.png)](/img/in-post/gasp-abp/38-is-moving-full.png)
+<small class="img-hint">三个容差比较，但只有两个接进了 AND</small>
+
+官方注释写的是设计意图：
+
+> Look at the current and future velocities (determined by trajectory generation) to determine if the character is trying to move (future velocity is greater than 0), or trying to stop (future velocity is 0).
+
+但**实际接线和注释不一致**，这点值得单独说：
 
 ```text
 IsMoving
-  = Velocity          ≠ (0,0,0)  容差 0.1
-  AND
-    Acceleration      ≠ (0,0,0)  容差 0.0
-  （图中另有 TrjFutureVelocity ≠ (0,0,0) 容差 10.0 的比较，
-    引脚走线在截图角度下辨认不清，实际接线以工程为准）
+  = Velocity      ≠ (0,0,0)  容差 0.1
+  AND  true                          ← 中间引脚是勾选的字面量
+  AND  Acceleration ≠ (0,0,0)  容差 0.0
 ```
 
-**关键是三个不同的容差：**
+`TrjFutureVelocity ≠ (0,0,0) 容差 10.0` 这个比较节点**存在于图里，但输出引脚是空的**，没连进 AND。AND 的中间引脚被一个勾上的布尔字面量顶替了。
+
+**所以未来速度这一路是被旁路掉的。** 注释描述的是原本的设计，节点留在图里作为「随时可以接回去」的开关。
+
+这种「注释和接线不一致」在示例工程里很常见 —— **看图要看引脚，不要看注释。**
+
+三个容差本身仍然值得看：
 
 | 量 | 容差 | 为什么 |
 |---|---|---|
 | `Velocity` | 0.1 | 物理速度有数值噪声，需要小死区 |
-| `TrjFutureVelocity` | 10.0 | 预测量本身噪声大，死区必须大得多 |
+| `TrjFutureVelocity` | 10.0 | 预测量本身噪声大，死区必须大得多（当前未启用） |
 | `Acceleration` | 0.0 | 输入是玩家给的，要么有要么没有，不需要死区 |
 
-**给每个量单独设容差，而不是统一一个数** —— 这是让状态判定不抖的关键细节。用同一个容差，要么输入不灵敏，要么预测值把状态抖飞。
+**给每个量单独设容差，而不是统一一个数** —— 这是让状态判定不抖的关键细节。
 
-**同时要求「有速度」和「有输入」** 的效果：松开摇杆后，虽然还在滑行（有速度），但 `IsMoving` 立刻变 false → `MovementState` 变 Idle → Chooser 换到停止相关的库。**这就是急停能提前起播的机制。**
+**当前生效的语义是「有速度 且 有输入」**：松开摇杆后，虽然还在滑行（有速度），但 `Acceleration` 归零 → `IsMoving` 立刻 false → `MovementState` 变 Idle → Chooser 换到停止相关的库。**这就是急停能提前起播的机制**，而且它不依赖被旁路掉的那一路。
 
 ## 6.2 IsStarting
 
-[![](/img/in-post/gasp-abp/27-is-starting.png)](/img/in-post/gasp-abp/27-is-starting.png)
-<small class="img-hint">未来速度显著高于当前速度 = 正在起步</small>
+[![](/img/in-post/gasp-abp/39-is-starting-full.png)](/img/in-post/gasp-abp/39-is-starting-full.png)
+<small class="img-hint">未来速度显著高于当前速度 = 正在起步，但 Pivot 期间一律否决</small>
 
 ```text
 IsStarting
   = IsMoving()
   AND VectorLengthXY(TrjFutureVelocity) >= VectorLengthXY(Velocity) + 100.0
+  AND NOT( CurrentDatabaseTags CONTAINS "Pivots" )
 ```
 
 **「未来会比现在快至少 100 单位/秒」= 正在加速起步。**
@@ -925,6 +1089,20 @@ IsStarting
 `+100` 这个绝对阈值避免了匀速时的误判 —— 匀速跑动时未来速度和当前速度基本相等，差值远小于 100。
 
 这是 3.3 节 `TrjFutureVelocity` 价值的最直接体现：**不需要状态机，不需要记录「上一帧是不是站着」，一个比较就判出了起步。**
+
+### 第三个条件才是精髓
+
+官方注释：
+
+> If the current Database asset is a pivot database, this function will always return false. This prevents the Motion Matching system from interrupting a pivot, since the second half of a pivot is very similar to a start.
+
+**Pivot 的后半段和 Start 在姿态上高度相似。**
+
+如果不加这个否决，会发生：角色急转 → 进 Pivot 库 → 转到一半，速度开始回升，`IsStarting` 判定成立 → Chooser 切到 Start 库 → **Pivot 被自己「转完之后的样子」打断，永远转不完**。
+
+这是 4.5 节 `CurrentDatabaseTags` 反馈总线的又一个用例，而且是最典型的一类：**用「我现在在播什么」否决一个本来会成立的判定，防止自我打断。**
+
+姿态相似的两个动作，光靠数值条件区分不开，必须靠「当前在播哪个库」这个额外信息。
 
 ## 6.3 Blend Stack 查询三件套
 
@@ -987,46 +1165,401 @@ MAX(DeltaSeconds, 0.001)  用在 VelocityAcceleration（3.4 组四）
 
 **凡是分母来自外部数据（角色属性、DeltaTime）的除法，一律加保护。** 这不是防御性编程过度，是这个环境里排查成本极高的一类 bug。
 
-## 6.6 被绑定但没有截图的三个函数
+## 6.6 三个补上截图的函数
 
-以下三个在图里出现为绑定项或调用节点，但内部结构没有单独截图。这里给出**从命名、同族函数和数据依赖推断的形态**，实机需要打开确认。
+这三个之前只在绑定位置露过面。补图之后，其中两个印证了推断，一个推断错了 —— 错的那个更有意思。
 
-### `Get_MMBlendTime`
+### `CalculateRelativeAccelerationAmount`（推断成立）
 
-绑在 Motion Matching 节点的 `Blend Time`（4.1）。
+[![](/img/in-post/gasp-abp/56-calc-rel-accel-1.png)](/img/in-post/gasp-abp/56-calc-rel-accel-1.png)
+<small class="img-hint">先做除零保护，再用 dot 判断在加速还是在减速</small>
 
-与 `Get_MMNotifyRecencyTimeOut` 是同一个绑定位置的邻居，极可能也是 `Select`：按 `Gait` 或 `MovementState` 分档，**低速长、高速短**。
+[![](/img/in-post/gasp-abp/57-calc-rel-accel-2.png)](/img/in-post/gasp-abp/57-calc-rel-accel-2.png)
+<small class="img-hint">两条分支结构相同，只差归一化分母</small>
 
-理由与 4.2 节相同 —— 高速时同样的混合时长会跨越更大的动作幅度，混合痕迹更明显。
+官方注释：
 
-### `Get_FootPlacementPlantSettings`
-
-绑在 Foot Placement 的 `Plant Settings`（5.5），与已截图的 `Get_FootPlacementInterpolationSettings` 是同一个节点上的兄弟引脚。
-
-大概率同构：读 `CurrentDatabaseTags` 分档。`Stops` / `Pivots` 这类脚步需要「踩死」的动画用更强的 plant，循环移动用较松的。
-
-### `CalculateRelativeAccelerationAmount`
-
-被 `Get_LeanAmount` 调用（5.6），取其 `.Y` 分量。
-
-从名字拆：`Relative`（本地空间）+ `Acceleration`（加速度）+ `Amount`（归一化量）。所以它做的是**把 `RelativeAcceleration` 归一化到 [-1, 1]**。
-
-关键推断：**归一化的分母是分方向的。**
+> This function calculates the character's Relative Acceleration Amount. This value represents the current amount of acceleration or deceleration relative to the actor rotation. It is normalized to a range of -1 to 1 so that -1 equals the Max Braking Deceleration, and 1 equals the Max Acceleration of the Character Movement Component.
 
 ```text
-加速方向 → 除以 CurrentMaxAcceleration
-减速方向 → 除以 CurrentMaxDeceleration
+if CurrentMaxAcceleration > 0 AND CurrentMaxDeceleration > 0:
+    if dot(Acceleration, Velocity) > 0:          ← 同向 = 在加速
+        UnrotateVector(
+          ClampVectorSizeMax(VelocityAcceleration, CurrentMaxAcceleration)
+            / CurrentMaxAcceleration,
+          CharacterTransform.Rotation )
+    else:                                        ← 反向 = 在刹车
+        UnrotateVector(
+          ClampVectorSizeMax(VelocityAcceleration, CurrentMaxDeceleration)
+            / CurrentMaxDeceleration,
+          CharacterTransform.Rotation )
 ```
 
-**这解释了 `CharacterProperties` 里为什么会有 `CurrentMaxDeceleration` 这个乍看多余的字段**（2.2 节）—— 加速和减速的上限本来就不一样，用同一个分母归一化会导致刹车时的倾斜量算错。
+**分方向用不同分母，这一点推断对了。** `CurrentMaxDeceleration` 这个字段的存在理由确认：加速上限和刹车上限本来就不是一个数，共用分母会让刹车时的倾斜量算错。
 
-如果只用一个上限，急刹车（减速度远大于加速度上限）会算出远超 1 的值，倾斜直接打满穿帮。
+三个之前没料到的细节：
+
+**一、判断加速/减速用的是 `dot(Acceleration, Velocity)`，不是加速度符号。** 点积同向为正 = 加速度和速度一个方向 = 在加速。这个判据在任意朝向下都成立，不需要先转到本地空间。
+
+**二、输入是 `VelocityAcceleration`（3.4 组四那个手算的），不是 CMC 给的 `Acceleration`。** 也就是说，倾斜跟的是**速度的实际变化率**，而不是玩家的输入意图。撞墙时输入还在推、速度已经归零，倾斜会正确地反映"没在加速"。
+
+**三、先 `ClampVectorSizeMax` 再除。** 这保证结果绝对落在 [-1, 1]，哪怕某帧的实际加速度超过了配置上限（碰撞、外力）。除完再 clamp 也能达到目的，但先 clamp 少一次越界中间值。
+
+最后 `UnrotateVector` 转到角色本地空间 —— 这才是 `Relative` 的含义。
+
+### `Get_FootPlacementPlantSettings`（推断成立）
+
+[![](/img/in-post/gasp-abp/58-footplacement-plant-settings.png)](/img/in-post/gasp-abp/58-footplacement-plant-settings.png)
+<small class="img-hint">和 InterpolationSettings 完全同构</small>
+
+```text
+isStops = Select( Index = UseExperimentalStateMachine,
+                  False = CurrentDatabaseTags CONTAINS "Stops",
+                  True  = BlendStackInputs.Tags CONTAINS "Stop" )
+
+return Select( Index = isStops,
+               False = PlantSettings_Default,
+               True  = PlantSettings_Stops )
+```
+
+同一节点上的 `Get_FootPlacementInterpolationSettings` 是逐节点对应的双胞胎：
+
+[![](/img/in-post/gasp-abp/59-footplacement-interp-settings-full.png)](/img/in-post/gasp-abp/59-footplacement-interp-settings-full.png)
+<small class="img-hint">换掉两个 Settings 变量，其余一模一样</small>
+
+**「读 CurrentDatabaseTags 分档」推断对了，但漏了一层：MM 路径和状态机路径读的是不同来源。**
+
+| 路径 | 读哪里 | 匹配的 tag |
+|---|---|---|
+| Motion Matching | `CurrentDatabaseTags` | `Stops` |
+| 实验状态机 | `BlendStackInputs.Tags` | `Stop` |
+
+两条路径拿"当前在播什么"的方式完全不同 —— MM 从选中的数据库拿，状态机从 Blend Stack 的输入结构拿。函数把这个差异吞掉了，对外只暴露一个 Settings。
+
+**这是 4.5 节反馈总线的完整形态**：`CurrentDatabaseTags` 只是 MM 路径的那一半，状态机路径有自己的等价物 `BlendStackInputs.Tags`。凡是要"知道当前在播什么"的地方，都会看到这对 Select 组合。
+
+顺带确认了 `S Blend Stack Inputs` 结构含 `Blend Curve` 和 `Tags` 两个字段。
+
+### `Get_MMBlendTime`（推断错了）
+
+[![](/img/in-post/gasp-abp/60-get-mm-blend-time.png)](/img/in-post/gasp-abp/60-get-mm-blend-time.png)
+<small class="img-hint">分档轴不是 Gait，是 MovementMode 的跳变</small>
+
+我之前推断它「按 Gait 分档，低速长高速短」，理由是它和 `Get_MMNotifyRecencyTimeOut` 挂在同一个节点上。实际结构完全不同：
+
+```text
+Switch on MovementMode:
+  OnGround:
+      Switch on MovementModeLastFrame:
+          InAir → 0.2      ← 刚落地
+          其他  → 0.5
+  InAir:
+      Velocity.Z > 100.0 ? 0.15   ← 刚起跳
+                         : 0.5
+```
+
+官方注释：
+
+> This function is used to change the blend time of the Motion Matching node, based on the current and previous states. In the future, we plan to allow blend times to be more directly set from the chosen databases.
+
+图上还有两条分区注释，直接写明了两个特例：落地（`0.2`）和起跳（`0.15`）。
+
+**分档轴不是「跑多快」，是「有没有刚发生状态跳变」。**
+
+我推断错的原因是类比错了对象。`NotifyRecencyTimeOut` 按 Gait 分档，是因为它管的是**脚步声的疏密**，那确实是速度的函数。而 Blend Time 管的是**混合时长**，它要解决的问题不是"动作幅度大小"，而是：
+
+**落地和起跳这两个瞬间，动画必须立刻到位，否则观感上会"飘"。** 0.5 秒的混合放在落地上，角色会像踩进棉花里。
+
+注意两个特例都是**边沿**：
+
+- 落地 = `MovementMode == OnGround` 且 `LastFrame == InAir`
+- 起跳 = `MovementMode == InAir` 且 `Velocity.Z > 100`（上升中）
+
+第一个是标准的 LastFrame 边沿检测（3.6 节）。第二个换了个思路 —— 用**速度符号**代替历史比较，因为"在空中且在上升"本身就足以区分起跳和下落，不需要额外记一帧。
+
+**这一节的教训比结论有用：同一个绑定位置的邻居函数，分档逻辑不一定同构。** 要看这个参数控制的是什么物理量，而不是看它的邻居怎么写。
+
+### 顺带：`Get_MMNotifyRecencyTimeOut` 的官方理由
+
+[![](/img/in-post/gasp-abp/62-mm-notify-recency-doc.png)](/img/in-post/gasp-abp/62-mm-notify-recency-doc.png)
+<small class="img-hint">Walk 0.2 / Run 0.2 / Sprint 0.16</small>
+
+4.2 节讲过数值，这次补图带了注释：
+
+> The notify recency time out needs to be a larger value that the time between each footstep sfx for each gait otherwise notifies will get filtered out.
+
+（原文 `that` 应为 `than`。）观察到的事实是 Sprint 取 `0.16`，比 Walk/Run 的 `0.2` 小 —— 冲刺时两次脚步的间隔更短，**这个窗口必须跟着缩短，否则相邻两声脚步会被当成同一个 notify 去重掉，冲刺时就会漏音。**
 
 ---
 
-# 第七部分：总表
+# 第七部分：事件判定函数族
 
-## 7.1 变量
+前面六部分覆盖的是**每帧都在算的连续量**。这一部分是另一类东西：**判断"某件事是不是正在发生"的布尔函数**。
+
+它们不参与主干更新，全部由 Chooser 或状态机转移条件调用，用来决定"该切到哪个动画库"。放在一起看，能看出这套系统判定事件的完整套路。
+
+## 7.1 基础量：Get_TrajectoryTurnAngle
+
+[![](/img/in-post/gasp-abp/40-get-trajectory-turn-angle.png)](/img/in-post/gasp-abp/40-get-trajectory-turn-angle.png)
+<small class="img-hint">输入方向与当前速度方向的夹角</small>
+
+```text
+Get_TrajectoryTurnAngle
+  = Delta( RotationFromXVector(Acceleration),
+           RotationFromXVector(Velocity) ).Yaw
+```
+
+**「玩家想去的方向」与「角色正在去的方向」之间差多少度。**
+
+这个函数本身只有三个节点，但它是后面四个判定的共同基础。值得单独拎出来的原因是它体现了一个取舍：
+
+**用 `Acceleration` 而不是 `TrjFutureVelocity` 来代表意图。** 两者都能表示"想去哪"，但加速度是**当前帧的原始输入方向**，没有经过轨迹预测的平滑。判转向要的就是这份未经平滑的即时性 —— 预测值会滞后，等它转过来，转向动画的起播时机已经错过了。
+
+`RotationFromXVector` 把向量转成 Rotator，再取 Delta 的 Yaw。**没有先归一化向量** —— 因为只关心方向，`RotationFromXVector` 内部本来就只用方向。
+
+后面所有用到它的地方都套了 `ABS`：只关心转多少度，不关心往左还是往右。
+
+## 7.2 IsPivoting
+
+[![](/img/in-post/gasp-abp/42-is-pivoting.png)](/img/in-post/gasp-abp/42-is-pivoting.png)
+<small class="img-hint">外层：按路径选子图，再和 IsMoving 求与</small>
+
+> This function is used to determine if the character is pivoting by checking if the character's future trajectory is moving in a much different direction than the character's current trajectory.
+
+```text
+IsPivoting
+  = Select( Index = UseExperimentalStateMachine,
+            False = <MM Pivot conditions>,
+            True  = <SM Pivot Condition> )
+  AND IsMoving()
+```
+
+MM 那一侧的子图：
+
+[![](/img/in-post/gasp-abp/41-mm-pivot-conditions.png)](/img/in-post/gasp-abp/41-mm-pivot-conditions.png)
+<small class="img-hint">阈值按 RotationMode 分三档</small>
+
+```text
+MM Pivot conditions
+  = ABS( Get_TrajectoryTurnAngle() ) >= Select( RotationMode:
+        OrientToMovement → 45.0
+        Strafe           → 30.0
+        Aim              →  0.0 )
+```
+
+**阈值按 RotationMode 分档，这是这个函数最值得抄的地方。**
+
+| 模式 | 阈值 | 为什么 |
+|---|---|---|
+| OrientToMovement | 45° | 角色朝向跟着移动方向转，小角度变化靠转身自然吸收，不需要 pivot |
+| Strafe | 30° | 朝向锁定，横移时同样的角度变化对脚步的冲击更大，门槛要低 |
+| Aim | 0° | 任何方向变化都算 pivot |
+
+同一个物理量（转角），在不同朝向模式下**对动画的意义完全不同**。OrientToMovement 下转 40° 只是身体顺势带过去；Strafe 下转 40° 意味着脚要重新排布。
+
+Aim 模式取 `0.0` 值得单独说：`ABS(x) >= 0` 恒为 true，所以**瞄准状态下只要在移动就永远判定为 pivoting**。这不是偷懒 —— 瞄准时角色始终面朝准星，任何移动方向的改变都是纯粹的脚步重排，本来就该一直走 pivot 库。
+
+最后与 `IsMoving()` 求与：**站着不动时输入方向再怎么变都不是 pivot。**
+
+注意这个函数所在的蓝图是 `SandboxCharacter_CMC_ABP`，不是 `ABP_MasterMM`。示例工程里判定函数散落在多个 ABP 中，找不到时记得往子类里翻。
+
+## 7.3 ShouldTurnInPlace
+
+[![](/img/in-post/gasp-abp/43-should-turn-in-place.png)](/img/in-post/gasp-abp/43-should-turn-in-place.png)
+<small class="img-hint">角度门槛 + 两种触发情境</small>
+
+> This function is used to determine if the character is turning in place by checking if the root bone rotation is different from the character's capsule rotation. For this project, if the rotation is greater than 50 degrees and the character is currently aiming, the character should be turned in place. We also allow turn in places to play if the character has just stopped, which gives us a "Stick Flick" behavior.
+
+```text
+ShouldTurnInPlace
+  = ABS( Delta( CharacterProperties.OrientationIntent,
+                RootTransform.Rotation ).Yaw ) >= 50.0
+  AND ( CharacterProperties.InputState.WantsToAim
+        OR ( MovementState == Idle
+             AND MovementStateLastFrame == Moving ) )
+```
+
+**角度用的是「意图朝向」和「根骨朝向」的差，不是和胶囊体朝向的差。**
+
+这是 Offset Root Bone 存在的直接后果（5.4 节）。根骨被允许偏离胶囊体，所以"角色视觉上朝哪"由根骨决定，胶囊体只是碰撞代理。**判转身要拿视觉朝向去比，否则会在根骨还没转过来时就误判转身完成。**
+
+两个触发情境的区别：
+
+**情境一：`WantsToAim`。** 瞄准时朝向锁定在准星上，玩家推摇杆改变意图朝向 → 角度差累积 → 转身。这是常规用法。
+
+**情境二：`MovementState == Idle AND LastFrame == Moving`。** 这是**刚停下的那一帧**，官方叫 "Stick Flick"。
+
+Stick Flick 指的是：玩家快速拨一下摇杆再松开。角色几乎没移动，但意图朝向已经甩到了新方向 —— 这一帧刚好满足"刚停下 + 角度差大"，于是播一个转身。**用一个转身动画兜住了"想转向但没真的走起来"这个手感盲区。**
+
+如果没有这条，快速拨杆的结果是角色抽搐一下回到原样，玩家会觉得输入丢了。
+
+情境二是 3.6 节 LastFrame 双份模式的教科书用例：**`当前 == A AND 上一帧 == B` 就是一次边沿检测**，只在跳变那一帧为真。
+
+图上还留了一条 WIP 备注：
+
+> Turn in place behavior during the aiming state is still WIP. Additional limits need to be applied to the steering or root offset node to prevent the character from lagging too far behind.
+
+翻译过来是：转身期间 Steering 和 Offset Root 会各自往自己的目标拉，两者叠加会让根骨落后胶囊体太多。**官方自己也还没解决这个耦合。**
+
+## 7.4 ShouldSpinTransition
+
+[![](/img/in-post/gasp-abp/44-should-spin-transition.png)](/img/in-post/gasp-abp/44-should-spin-transition.png)
+<small class="img-hint">大角度 + 高速 + 非 Pivot</small>
+
+> If the root bone rotation and character's capsule rotations are very different while moving, this function will allow a spin transition animation to play. Spin transitions are locomotion animations that rotate the character while moving in a fixed world direction, and are useful when switching rotation modes.
+
+```text
+ShouldSpinTransition
+  = ABS( Delta( CharacterTransform.Rotation,
+                RootTransform.Rotation ).Yaw ) >= 130.0
+  AND Speed2D >= 150.0
+  AND NOT( CurrentDatabaseTags CONTAINS "Pivots" )
+```
+
+**和 `ShouldTurnInPlace` 是一对：都在测根骨与另一个朝向的偏差，但比较对象和阈值完全不同。**
+
+| | ShouldTurnInPlace | ShouldSpinTransition |
+|---|---|---|
+| 比较对象 | 意图朝向 vs 根骨 | **胶囊体朝向** vs 根骨 |
+| 阈值 | 50° | **130°** |
+| 速度要求 | 站定（或瞄准） | **Speed2D ≥ 150** |
+
+比较对象的差异是关键：
+
+- **转身**问的是"玩家想让我朝哪，我现在朝哪"→ 意图 vs 根骨
+- **Spin** 问的是"我实际在往哪走，我身体朝哪"→ 胶囊体 vs 根骨
+
+后者是**身体和运动方向脱节**，只在移动中才可能发生。官方举的例子：Orient to Movement 模式下朝摄像机跑，切到 Strafe → 角色需要瞬间转 180°。
+
+`130°` 这个阈值说明它专治大角度：小于 130° 的偏差交给 Steering 平滑处理，超过就得靠专门的旋转动画。
+
+`NOT Contains(Pivots)` 又出现了 —— 和 `IsStarting` 同样的防自我打断（6.2 节）。**Pivot 过程中根骨和胶囊体本来就会大幅偏离，那是 pivot 动画自己造成的，不能拿它当触发 spin 的理由。**
+
+图上一条实话：
+
+> Currently, we are using refacing starts in place of spin transitions, but plan to provide actual spin transition data in a future release.
+
+**函数写好了，但对应的动画数据还没做**，暂时用 refacing start 顶着。判定逻辑和动画资产是解耦的，可以先把判定搭好再补资产。
+
+## 7.5 JustTraversed
+
+[![](/img/in-post/gasp-abp/45-just-traversed.png)](/img/in-post/gasp-abp/45-just-traversed.png)
+<small class="img-hint">曲线还在，但 Slot 已经退出 = 正在混出翻越动作</small>
+
+> This function is used to select the tail end of traversal animations when blending back to locomotion. For example, if the MovingTraversal anim curve value is greater than 1, and the default slot is NOT active (slots are not active when blending out), the character must be blending out from a moving traversal action, therefore this function will return true. The chooser then allows the Motion Matching node to select from the "FromTraversal" databases for a seamless followthrough.
+
+```text
+JustTraversed
+  = NOT IsSlotActive("DefaultSlot")
+  AND GetCurveValue("MovingTraversal") > 0.0
+  AND ABS( Get_TrajectoryTurnAngle() ) <= 50.0
+```
+
+**这个函数是全篇最巧的一个判定，值得慢慢看。**
+
+前两个条件单独看都很普通，组合起来构成了一个精确的时间窗：
+
+| 条件 | 含义 |
+|---|---|
+| `MovingTraversal` 曲线 > 0 | 当前姿态里**还有**翻越动画的成分 |
+| Slot **不**活跃 | 蒙太奇**已经**进入淡出 |
+
+**两者同时成立的唯一时刻，就是翻越动作正在混出、但还没混完的那一小段。**
+
+原理在官方注释里说破了：`IsSlotActive` 在淡出期间返回 false，但曲线值仍然大于 0（因为姿态里还有它的权重）。**用「Slot 状态」和「曲线值」的不同步，把一个转瞬即逝的过渡窗口给框了出来。**
+
+这比"记一个 bool 然后延时清掉"高明得多 —— 不需要任何状态变量，窗口的起止完全由混合本身决定，混多久窗口就多长。
+
+框出这个窗口是为了让 Chooser 切到 `FromTraversal` 数据库。翻越结束时角色的姿态很特殊（可能在半空、身体前倾），普通的 locomotion 循环接不上，需要一组专门"从翻越姿态接回跑步"的动画。**这正好对应上一篇里数据库命名的 `FromTraversal` 阶段字段。**
+
+第三个条件 `ABS(TurnAngle) <= 50` 是个否决：**翻完立刻要转向的话，就不走 FromTraversal 的顺接了。** 顺接动画假设你会继续朝原方向跑，玩家要拐弯时强行顺接反而更别扭，不如让 MM 自由选。
+
+## 7.6 落地判定四件套
+
+落地这一个事件，被拆成了四个函数。
+
+### `Get_LandVelocity`
+
+[![](/img/in-post/gasp-abp/48-get-land-velocity.png)](/img/in-post/gasp-abp/48-get-land-velocity.png)
+
+```text
+Get_LandVelocity = CharacterProperties.LandVelocity.Z
+```
+
+一行转发。**存在的意义是把「落地冲击」这个概念固定为 Z 分量** —— 调用方不需要知道 `LandVelocity` 其实是个三维向量，也不会有人误用 XY。
+
+### `JustLanded_Light` / `JustLanded_Heavy`
+
+[![](/img/in-post/gasp-abp/46-just-landed-light.png)](/img/in-post/gasp-abp/46-just-landed-light.png)
+<small class="img-hint">轻着地</small>
+
+[![](/img/in-post/gasp-abp/47-just-landed-heavy.png)](/img/in-post/gasp-abp/47-just-landed-heavy.png)
+<small class="img-hint">重着地，只有比较符号相反</small>
+
+```text
+JustLanded_Light = JustLanded AND ABS(LandVelocity.Z) <  ABS(HeavyLandSpeedThreshold)
+JustLanded_Heavy = JustLanded AND ABS(LandVelocity.Z) >= ABS(HeavyLandSpeedThreshold)
+```
+
+两个函数只差比较符号，**互斥且完备** —— `JustLanded` 为真时必然恰好命中一个。
+
+两侧都套 `ABS`：`LandVelocity.Z` 是负值（向下），阈值配置可能填正也可能填负。**两边都取绝对值，配置怎么填都不会错。** 这种对配置容错的写法在示例工程里出现了多次。
+
+`JustLanded` 是 `CharacterProperties` 里的字段，由 C++ 侧在落地那一帧置位。**这类"某事刚发生"的瞬时标志，蓝图侧算不出来，只能由 C++ 推过来** —— 这也是 2.1 节那个"唯一入口"必须存在的原因之一。
+
+### `PlayLand` / `PlayMovingLand`
+
+[![](/img/in-post/gasp-abp/49-play-land.png)](/img/in-post/gasp-abp/49-play-land.png)
+<small class="img-hint">纯边沿检测</small>
+
+[![](/img/in-post/gasp-abp/50-play-moving-land.png)](/img/in-post/gasp-abp/50-play-moving-land.png)
+<small class="img-hint">同样的边沿，加一个转角限制</small>
+
+```text
+PlayLand       = MovementMode == OnGround AND MovementModeLastFrame == InAir
+PlayMovingLand = MovementMode == OnGround AND MovementModeLastFrame == InAir
+                 AND ABS( Get_TrajectoryTurnAngle() ) <= 120.0
+```
+
+**这里出现了同一事件的第二套判定方式，和 `JustLanded` 并存。**
+
+| | 数据来源 | 特点 |
+|---|---|---|
+| `JustLanded_*` | C++ 推来的 `JustLanded` 标志 + 冲击速度 | 带**强度**信息 |
+| `PlayLand` / `PlayMovingLand` | `MovementMode` 的 LastFrame 边沿 | 纯**时机**，蓝图自足 |
+
+两套并存不是冗余。`JustLanded_*` 回答"这次落地有多重"，`PlayLand` 回答"落地这一帧到了没"。前者选动画强度，后者管触发时机。
+
+`PlayMovingLand` 多的那个 `<= 120°` 条件和 `JustTraversed` 的第三条件是同一个思路：**落地后如果要大幅转向，就别用"带着水平速度继续跑"的落地动画。** 转角超过 120° 说明玩家想掉头，顺势前冲的落地动画会和意图打架。
+
+## 7.7 这一族的四条共同套路
+
+七个判定函数看下来，套路是重复的：
+
+**一、阈值不是常数，是查表。** `IsPivoting` 按 RotationMode 三档，`Get_MMBlendTime` 按 MovementMode 分支。硬编码一个 magic number 是最省事的，但也是手感最差的。
+
+**二、"事件发生"= 边沿，不是状态。** `PlayLand`、`ShouldTurnInPlace` 的 Stick Flick 分支，都是 `当前 == A AND 上一帧 == B`。3.6 节那套 LastFrame 变量的价值，到这一部分才完全兑现。
+
+**三、几乎每个判定都带一个否决条件。**
+
+| 函数 | 否决 | 防什么 |
+|---|---|---|
+| `IsStarting` | `NOT Contains(Pivots)` | Pivot 后半段被误判成起步 |
+| `ShouldSpinTransition` | `NOT Contains(Pivots)` | Pivot 造成的偏差触发 spin |
+| `JustTraversed` | 转角 > 50° | 要拐弯时强行顺接 |
+| `PlayMovingLand` | 转角 > 120° | 要掉头时用前冲落地 |
+
+**肯定条件决定"什么时候可以播"，否决条件决定"什么时候不该播"。** 后者往往比前者更影响成品质量，因为出错的表现是"动画卡住"或"动作打架"，比不播更难看。
+
+**四、姿态相似的动作靠 tag 区分，不靠数值。** 两次 `NOT Contains(Pivots)` 都在处理同一类问题：**Pivot 中段的数值特征和别的动作撞了**，光看速度、转角区分不出来，只能问"我现在在播哪个库"。
+
+这是 4.5 节反馈总线真正的用途 —— 不是为了炫技，是因为**纯数值判定在动作姿态相似时必然失效**，必须引入「当前在播什么」作为额外维度。
+
+---
+
+# 第八部分：总表
+
+## 8.1 变量
 
 | 类别 | 变量 |
 |---|---|
@@ -1037,31 +1570,33 @@ MAX(DeltaSeconds, 0.001)  用在 VelocityAcceleration（3.4 组四）
 | **轨迹** | `Trajectory` / `TrjPastVelocity` / `TrjCurrentVelocity` / `TrjFutureVelocity` / `PreviousDesiredControllerYawLastUpdate` |
 | **状态枚举** | `MovementState` / `Gait` / `Stance` / `MovementMode` / `RotationMode`（各带 `LastFrame`） |
 | **MM 结果** | `CurrentSelectedAnim` / `CurrentSelectedDatabase` / `CurrentDatabaseTags` |
-| **配置** | `OffsetRootBoneEnable` / `OffsetRootTranslationRadius` / `UseExperimentalStateMachine` / `InterpolationSettings_Default` / `InterpolationSettings_Stops` |
-| **状态机分支专用** | `TargetRotation` |
+| **配置** | `OffsetRootBoneEnabled` / `OffsetRootTranslationRadius`（CVar 驱动） / `UseExperimentalStateMachine` / `InterpolationSettings_Default` / `InterpolationSettings_Stops` / `PlantSettings_Default` / `PlantSettings_Stops` / `HeavyLandSpeedThreshold` |
+| **状态机分支专用** | `TargetRotation` / `BlendStackInputs`（含 `Blend Curve` / `Tags`） |
 
-## 7.2 函数
+## 8.2 函数
 
 | 类别 | 函数 | 调用方 |
 |---|---|---|
 | **数据采集** | `UpdatePropertiesFromCharacter` | Event Graph |
 | **每帧主干** | `UpdateTrajectory` / `UpdateEssentialValues` / `UpdateState` | Event Graph |
 | **MM 回调** | `Update_PoseSearch` / `Update_MotionMatchingPoseSelection` | MM 节点事件 |
-| **MM 参数** | `Get_MMNotifyRecencyTimeOut` / `Get_MMBlendTime` | MM 节点绑定 |
+| **MM 参数** | `Get_MMNotifyRecencyTimeOut` / `Get_MMBlendTime` / `Get_MMInterruptMode` | MM 节点绑定 |
 | **Steering** | `Get_DesiredFacing` / `EnableSteering` | Steering 节点绑定 |
 | **Warping** | `Get_OrientationWarpingWarpingSpace` | Warping 节点绑定 |
 | **Offset Root** | `Get_OffsetRootTranslationMode` / `Get_OffsetRootRotationMode` / `Get_OffsetRootTranslationHalfLife` / `Get_OffsetRootTranslationRadius` | Offset Root Bone 节点绑定 |
 | **Foot Placement** | `Get_FootPlacementPlantSettings` / `Get_FootPlacementInterpolationSettings` | Foot Placement 节点绑定 |
 | **Lean** | `Get_LeanAmount` / `CalculateRelativeAccelerationAmount` | Blendspace 绑定 |
 | **Aim Offset** | `Get_AOValue` / `Get_Ao_Yaw` / `Enable_AO` | Blendspace / Blend 节点绑定 |
-| **判定** | `IsMoving` / `IsStarting` | 被上面各类调用 |
-| **Blend Stack 查询** | `GetCurrentBlendStackAnimAsset` / `...AnimAssetTime` / `...AnimIsActive` / `Convert to Motion Matching Node` | Warping / Steering / MM 回调 |
-| **Slot 查询** | `IsSlotActive` / `GetSlotLocalWeight` | Offset Root / Enable_AO |
+| **状态判定** | `IsMoving` / `IsStarting` | 被上面各类调用 |
+| **事件判定** | `Get_TrajectoryTurnAngle` / `IsPivoting` / `ShouldTurnInPlace` / `ShouldSpinTransition` / `JustTraversed` | Chooser、状态机转移条件 |
+| **落地判定** | `Get_LandVelocity` / `JustLanded_Light` / `JustLanded_Heavy` / `PlayLand` / `PlayMovingLand` | Chooser、状态机转移条件 |
+| **节点引用** | `GetCurrentBlendStackAnimAsset` / `...AnimAssetTime` / `...AnimIsActive` / `Convert to Motion Matching Node` / `Get_PoseHistoryReference` | Warping / Steering / MM 回调 |
+| **Slot 查询** | `IsSlotActive` / `GetSlotLocalWeight` | Offset Root / Enable_AO / JustTraversed |
 | **数值防护** | `SafeDivide` / `MAX` | UpdateEssentialValues |
 
 ---
 
-# 第八部分：七条可复用的设计约定
+# 第九部分：十条可复用的设计约定
 
 **① 唯一入口 + 一次性快照。**
 所有外部数据从一个接口函数一次性拉进一个结构体。之后全图只读自己的成员变量。这同时买到了三样东西：线程安全、帧内一致性、与角色类型解耦。
@@ -1084,14 +1619,23 @@ MAX(DeltaSeconds, 0.001)  用在 VelocityAcceleration（3.4 组四）
 **⑦ 快进慢出，且分级查询。**
 AO 的 0.75/1.5、Offset Root 的 0.1/0.3 —— 加进来要快，撤出去要慢。同时注意查询粒度：需要立刻响应就查布尔（`IsSlotActive`），需要平滑过渡就查权重（`GetSlotLocalWeight`）。
 
+**⑧ 判定要成对写：肯定条件 + 否决条件。**
+`IsStarting` 的 `NOT Contains(Pivots)`、`JustTraversed` 的转角上限、`PlayMovingLand` 的 120° —— 每个判定都配了一条"什么时候不该播"。**肯定条件决定功能有没有，否决条件决定成品好不好看。** 出错时前者的表现是"没反应"，后者是"动作打架"，后者更难查也更刺眼。
+
+**⑨ 数值区分不开的，用「当前在播什么」区分。**
+Pivot 后半段和 Start 的速度、转角特征几乎一样，纯数值判定必然误触发。引入 `CurrentDatabaseTags` 作为额外维度，才能把它们分开。**这是 Motion Matching 相比状态机唯一真正缺失的东西 —— 状态机天然知道自己在哪个状态，MM 需要手动把这个信息喂回来。**
+
+**⑩ 状态变了 ≠ 该换动画了。**
+`Get_MMInterruptMode` 里，Gait 变化要求 `MovementState == Moving`，Stance 变化要求 `MovementMode == OnGround`。**中间隔着一层"这个变化在当前情境下有没有视觉意义"的判断。** 少了这层，就会有"站着按冲刺键角色抖一下"这类 bug。
+
 ---
 
-# 第九部分：复刻检查清单
+# 第十部分：复刻检查清单
 
 按依赖顺序，前面没做完不要做后面：
 
 ```text
-□  1. 定义 CharacterProperties 结构体（15 字段：连续量 / 上限量 / 枚举）
+□  1. 定义 CharacterProperties 结构体（连续量 / 上限量 / 枚举 / 瞬时标志）
 □  2. 定义 BPI_PlayerData 接口，角色侧实现 GetPropertiesForAnimation
 □  3. AnimBP 里写 UpdatePropertiesFromCharacter，确认标了 Thread Safe
 
@@ -1105,19 +1649,28 @@ AO 的 0.75/1.5、Offset Root 的 0.1/0.3 —— 加进来要快，撤出去要�
 □ 10. AnimGraph 放 Pose History，标签与 Schema 一致
 
 □ 11. Motion Matching 节点 + Update_PoseSearch（Chooser → SetDatabasesToSearch）
-□ 12. Interrupt Mode 选 Interrupt on Database Change
-□ 13. Update_MotionMatchingPoseSelection → CurrentDatabaseTags
-□ 14. 给 Database 打 Tag（Stops / Pivots / TurnInPlace / Starts）
+□ 12. Get_MMInterruptMode：默认 Do Not Interrupt，核心状态跳变才打断
+□ 13. Get_MMBlendTime：落地 0.2 / 起跳 0.15 / 常规 0.5
+□ 14. Update_MotionMatchingPoseSelection → CurrentDatabaseTags
+□ 15. 给 Database 打 Tag（Stops / Pivots / TurnInPlace / Starts / FromTraversal）
 
-□ 15. Blend Stack 内：Orientation Warping + Enable_Warping 曲线
-□ 16. Steering ×2（常规 0.2 / TurnInPlace 100000）
-□ 17. Offset Root Bone + 四个 Get_ 函数
-□ 18. Foot Placement + Leg IK，插值设置读 Tag
-□ 19. Additive Lean（RelativeAcceleration.Y × 速度缩放）
-□ 20. Aim Offset（Get_AOValue / Get_Ao_Yaw / Enable_AO / 0.75 进 1.5 出）
+□ 16. Blend Stack 内：Orientation Warping + Enable_Warping 曲线
+□ 17. Steering ×2（常规 0.2 / TurnInPlace 100000）
+□ 18. Offset Root Bone + 四个 Get_ 函数
+□ 19. Foot Placement + Leg IK，Plant/Interpolation 两套设置都读 Tag
+□ 20. Additive Lean（CalculateRelativeAccelerationAmount.Y × 速度缩放）
+□ 21. Aim Offset（Get_AOValue / Get_Ao_Yaw / Enable_AO / 0.75 进 1.5 出）
+
+□ 22. Get_TrajectoryTurnAngle，后面四个判定都依赖它
+□ 23. IsPivoting（阈值按 RotationMode 分 45/30/0）
+□ 24. ShouldTurnInPlace（50° + 瞄准 或 刚停下）
+□ 25. JustTraversed（Slot 不活跃 + 曲线仍 >0 的混出窗口）
+□ 26. 落地四件套（JustLanded_Light/Heavy + PlayLand/PlayMovingLand）
 ```
 
 **前 10 步是地基。** 第 11 步之前如果 `Trajectory` 或 `Pose History` 有任何问题，MM 一定返回 `FLT_MAX`，而且你会花大量时间去怀疑 Schema 和 Database —— 那是上一篇讲的七步排查里最常见的弯路。
+
+**22 到 26 可以最后做。** 这一批是判定函数，不做也能跑，只是 Chooser 的分支会少几条。**但它们决定了手感的上限** —— 前 21 步搭的是"能动"，这 5 步补的是"动得对"。
 
 ---
 
