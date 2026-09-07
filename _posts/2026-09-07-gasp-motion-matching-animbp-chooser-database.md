@@ -1,7 +1,7 @@
 ---
 layout: post
-title: GASP 5.8 Motion Matching 全流程拆解：动画蓝图、Chooser Table 与 Database 切分
-subtitle: 从资产地图到 AnimGraph 结构、代价权重与数据库分层的分步教程
+title: GASP 5.8 Motion Matching 全流程拆解
+subtitle: 动画蓝图、Chooser Table 与 Database 切分
 author: KivenWu
 header-style: text
 tags:
