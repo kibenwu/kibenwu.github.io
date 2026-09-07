@@ -98,6 +98,11 @@ Content/Characters/UEFN_Mannequin/Animations/MotionMatchingData/
 
 注意最后那批 `CHT_PoseSearchDatabases_*`：**Chooser 在 GASP 里第一层职责不是选动画，而是选数据库。** 这一点后面详述。
 
+[![](/img/in-post/gasp-mm/03-mm-data-folder.png)](/img/in-post/gasp-mm/03-mm-data-folder.png)
+<small class="img-hint">MotionMatchingData 目录：Schemas / Channels / Normalization_Sets / Databases 四类资产并列</small>
+
+<!-- TODO 截图 03-mm-data-folder.png：Content Browser 定位到 Animations/MotionMatchingData/，左侧目录树展开，右侧显示 PSS_* 与 CHT_PoseSearchDatabases_* 资产图标 -->
+
 ## 1.3 动画素材组织
 
 ```text
@@ -169,6 +174,11 @@ GASP 的 AnimBP 不是一张大图，而是分层职责：
     Aim Offset / Additive Lean
     Inertialization / Dead Blending
 ```
+
+[![](/img/in-post/gasp-mm/01-animgraph-overview.png)](/img/in-post/gasp-mm/01-animgraph-overview.png)
+<small class="img-hint">SandboxCharacter_CMC_ABP 的 AnimGraph 全貌</small>
+
+<!-- TODO 截图 01-animgraph-overview.png：打开 SandboxCharacter_CMC_ABP → AnimGraph，缩放到能同时看清 Trajectory / Pose History / Motion Matching / Warping / Foot Placement / Offset Root Bone 这条主链路 -->
 
 CMC ABP 中可见的函数与图（来自资产内可读名称）：
 
@@ -279,6 +289,11 @@ PlayRate = 角色实际速度 / 当前动画在该帧的根运动速度
 ```
 
 动画的根运动速度来自烘焙曲线 `MoveData_Speed`（由 Anim Modifier `AM_MoveData_Speed` 生成）。逐帧曲线保证起步、减速段也能对齐，平均速度做不到这一点。
+
+[![](/img/in-post/gasp-mm/02-blendstack-playrate.png)](/img/in-post/gasp-mm/02-blendstack-playrate.png)
+<small class="img-hint">Blend Stack per-sample 图中的 Dynamic Play Rate 计算</small>
+
+<!-- TODO 截图 02-blendstack-playrate.png：Motion Matching / Blend Stack 节点的 per-sample 图，framing 到 GetDynamicPlayRate 函数展开后的 Speed2D ÷ MoveData_Speed → Clamp 那段连线 -->
 
 三种消除脚滑的手段分工：
 
@@ -411,6 +426,11 @@ Output Struct Column 该行输出的结构体数据
 
 求值顺序：**自上而下，第一批命中的行胜出。** 因此行顺序本身就是优先级，特例放上面，兜底放最后。
 
+[![](/img/in-post/gasp-mm/04-chooser-databases.png)](/img/in-post/gasp-mm/04-chooser-databases.png)
+<small class="img-hint">CHT_PoseSearchDatabases：列是提问，行是规则，结果是一组 Database</small>
+
+<!-- TODO 截图 04-chooser-databases.png：双击打开 CHT_PoseSearchDatabases，截整张表格视图，要能看清列头（Stance / MovementMode / Gait 等）与右侧 Result 列引用的 PSD_* -->
+
 ## 3.4 输入上下文：用结构体，不要散参数
 
 GASP 的 Chooser 都绑定结构体作为上下文，例如：
@@ -458,6 +478,11 @@ Transition to ...
 每组行引用对应命名族的动画，例如 `M_Neutral_Stand_Run_Loop_F`、`M_Neutral_Run_Pivot_*`、`M_Neutral_Crouch_*`、`M_Neutral_Jump_*`。
 
 **设计要点：`StateMachineState` 是第一层筛选列。** 因此所有状态共用一张表，而不是每个状态一张。这直接避免了「状态 × 步态 × 姿态 × 方向」的资产爆炸。
+
+[![](/img/in-post/gasp-mm/05-chooser-cmc-anims.png)](/img/in-post/gasp-mm/05-chooser-cmc-anims.png)
+<small class="img-hint">CHT_CMCCharacterAnimations：行按状态语义分组，同一张表覆盖全部 locomotion 状态</small>
+
+<!-- TODO 截图 05-chooser-cmc-anims.png：打开 ExperimentalStateMachineData/CHT_CMCCharacterAnimations，滚到 Stand Runs / Crouch / Jumps 那几组行，要能看清 StateMachineState 列的取值与右侧引用的 M_Neutral_* -->
 
 一行的完整语义是：
 
@@ -519,6 +544,11 @@ MirrorDataTable:   已配置（约定指向 MDT_UEFN_Mannequin）
 - **`StripZ`** 去掉竖直分量，地面移动匹配更稳定。
 - **`NormalizeWithCommonSchema`** 让多个数据库能在同一尺度下比较，这是分库策略成立的前提。
 - **Heading 通道**单独存在，朝向不再只靠位置隐含表达，Strafe 表现更可控。
+
+[![](/img/in-post/gasp-mm/06-schema-channels.png)](/img/in-post/gasp-mm/06-schema-channels.png)
+<small class="img-hint">PSS_Default 的通道列表与每个通道的 Weight</small>
+
+<!-- TODO 截图 06-schema-channels.png：打开 PSS_Default，Details 面板展开 Channels 数组，展开其中 Trajectory 通道显示 Sample Times 与 Weight；同屏带上 Component Stripping / Data Preprocessor / Mirror Data Table 三项 -->
 
 调权重的方向性结论：
 
@@ -587,6 +617,11 @@ Override Continuing Pose Cost Bias:   开头约 10 帧，值 -0.1
 
 **这个量级来自实测，不是通用常数。** 正确做法是先看 Rewind Debugger 里典型 Cost 的量级，取其 5%～20% 作为 Bias。
 
+[![](/img/in-post/gasp-mm/07-notify-timeline.png)](/img/in-post/gasp-mm/07-notify-timeline.png)
+<small class="img-hint">起步动画上的三条 Notify State 分布：Branch In / Block Transition In / Override Continuing Pose Cost Bias</small>
+
+<!-- TODO 截图 07-notify-timeline.png：打开一个起步动画（如 M_Neutral_Jog_Start_F），截 Notify 轨道区，要能看到三条 Notify State 的起止范围；再点选 Override Continuing Pose Cost Bias 让 Details 面板显示 -0.1 -->
+
 ## 4.5 一条铁律
 
 ```text
@@ -644,6 +679,11 @@ Phase  ∈ Loops | Pivots | Starts | Stops | SpinTransition | Turns |
 
 `UnmirroredOnly` 说明 GASP 不依赖运行时镜像来生成反向动作，而是把左右变体作为独立资产入库。代价是资产更多，收益是可控性与表演质量。
 
+[![](/img/in-post/gasp-mm/08-database-entries.png)](/img/in-post/gasp-mm/08-database-entries.png)
+<small class="img-hint">PSD_Dense_Stand_Run_Loops 的条目列表与单条的 SamplingRange / MirrorOption</small>
+
+<!-- TODO 截图 08-database-entries.png：打开 PSD_Dense_Stand_Run_Loops，左侧 Asset 列表全展开，选中任一条让右侧 Details 显示 Sampling Range 与 Mirror Option；同屏带上顶部的 Schema 与 Normalization Set 引用 -->
+
 Relaxed 层把方向拆得更细，出现独立的 `PSD_Relaxed_Stand_Run_LL_Loops`、`..._RR_Loops` 以及按起脚拆分的库；还包含滑行退出链：
 
 ```text
@@ -683,6 +723,11 @@ PoseSearchMode:  BruteForce
 - 翻越动作用蒙太奇，因为需要分段控制与事件；
 - 用网格采样表达高度与深度这类连续参数；
 - `BruteForce` 说明库小、精度优先。
+
+[![](/img/in-post/gasp-mm/09-traversal-database.png)](/img/in-post/gasp-mm/09-traversal-database.png)
+<small class="img-hint">PSD_Traversal：BruteForce + AnimMontage + 网格采样，与 locomotion 库结构完全不同</small>
+
+<!-- TODO 截图 09-traversal-database.png：打开 PSD_Traversal，选中一条 AM_M_Neutral_Vault_*，Details 面板要能看到 BlendParamX/Y、bUseGridForSampling、NumberOfHorizontal/VerticalSamples；同屏带上 Pose Search Mode = BruteForce -->
 
 ## 5.4 特殊 Schema 的差异
 
@@ -889,6 +934,11 @@ Search Cost   = 3.4028235e38   （FLT_MAX）
 
 先看 Output Log，过滤 `LogPoseSearch`，多数情况直接给出原因。
 
+[![](/img/in-post/gasp-mm/10-fltmax-log.png)](/img/in-post/gasp-mm/10-fltmax-log.png)
+<small class="img-hint">FLT_MAX 现场：Output Log 过滤 LogPoseSearch 后给出的真实原因</small>
+
+<!-- TODO 截图 10-fltmax-log.png：故意把某个 Branch In Notify 的 Database 清空并 PIE，截 Output Log（过滤框输入 LogPoseSearch），要能看到 null Database 的报错行；如能同屏带上显示 3.4028235e38 的调试面板更好 -->
+
 ## 7.2 选中了但表现错
 
 优先用 Rewind Debugger，而不是猜：
@@ -909,6 +959,16 @@ Rewind Debugger
 - **Blend Weight 连续但画面跳** → 很可能是同一动画内相位跳变，而非切换动画；
 - **Cost Breakdown 中 Trajectory 占比过高** → 会为追轨迹牺牲姿态连续性，表现为错脚、抖动；
 - **Pose 占比过高** → 顺但不跟手。
+
+[![](/img/in-post/gasp-mm/11-rewind-pose-search.png)](/img/in-post/gasp-mm/11-rewind-pose-search.png)
+<small class="img-hint">Rewind Debugger 的 Pose Search 轨道：候选列表、Cost 排序与 Cost Breakdown</small>
+
+<!-- TODO 截图 11-rewind-pose-search.png：PIE 录制一段起步 → 转向 → 停止，Rewind Debugger 里选中一帧，展开 Pose Search 轨道，右侧显示候选列表按 Cost 排序，并点开 Cost Breakdown 显示各通道贡献 -->
+
+[![](/img/in-post/gasp-mm/12-rewind-blend-weights.png)](/img/in-post/gasp-mm/12-rewind-blend-weights.png)
+<small class="img-hint">Blend Weights 与 Chooser Evaluation 轨道：一帧里栈中有哪些动画、Chooser 求了几次值</small>
+
+<!-- TODO 截图 12-rewind-blend-weights.png：同一段录制，同时展开 Blend Weights / Chooser Evaluation / Notifies 三条轨道，取一次 Pivot 发生的时刻，能看到权重交叉与 Notify 区间对齐 -->
 
 ## 7.3 常见症状对照
 
