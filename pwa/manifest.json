@@ -1,7 +1,7 @@
 {
-  "name": "Hux Blog",
-  "short_name": "Hux Blog",
-  "description": "About an engineer & designer who loves web.",
+  "name": "KivenWu's Blog",
+  "short_name": "KivenWu",
+  "description": "技术美术 & 独立游戏开发的笔记与总结",
   "icons": [{
     "src": "icons/128.png",
     "sizes": "128x128",

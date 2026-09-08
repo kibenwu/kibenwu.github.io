@@ -1,8 +1,8 @@
 ---
 layout: post
-title: Vex Function  Library
+title: Vex Function Library
 subtitle: 一些整理的Vex Function 笔记
-author: KW
+author: KivenWu
 header-style: text
 tags:
   - Houdini
