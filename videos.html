@@ -1,0 +1,234 @@
+---
+title: Videos
+layout: default
+description: "在 YouTube 上发布的视频"
+header-img: img/home-bg.jpg
+tag-filter: true
+---
+<!-- Page Header -->
+{% include intro-header.html type='page' short=true %}
+
+<style>
+	.video-channel {
+		margin: 0 0 6px;
+		font-size: 14px;
+	}
+
+	.video-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 34px 26px;
+	}
+
+	.video-card {
+		min-width: 0;
+	}
+
+	.video-thumb,
+	.video-embed {
+		display: block;
+		position: relative;
+		width: 100%;
+		padding: 0 0 56.25%;
+		margin: 0;
+		border: 0;
+		border-radius: 4px;
+		background: #000;
+		overflow: hidden;
+	}
+
+	.video-thumb {
+		cursor: pointer;
+	}
+
+	.video-thumb img,
+	.video-embed iframe {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		border: 0;
+	}
+
+	.video-thumb img {
+		margin: 0;
+		object-fit: cover;
+		transition: transform .4s ease, opacity .3s ease;
+	}
+
+	.video-play {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		width: 62px;
+		height: 62px;
+		margin: -31px 0 0 -31px;
+		border-radius: 50%;
+		background: rgba(0, 0, 0, .55);
+		transition: background .25s ease;
+	}
+
+	.video-play::before {
+		content: '';
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		margin: -11px 0 0 -6px;
+		border-style: solid;
+		border-width: 11px 0 11px 18px;
+		border-color: transparent transparent transparent #fff;
+	}
+
+	.video-thumb:hover .video-play,
+	.video-thumb:focus .video-play {
+		background: #0085a1;
+	}
+
+	.video-thumb:hover img {
+		transform: scale(1.04);
+		opacity: .85;
+	}
+
+	.video-title {
+		font-size: 18px;
+		font-weight: 600;
+		line-height: 1.35;
+		margin: 14px 0 6px;
+	}
+
+	.video-desc {
+		font-size: 14px;
+		line-height: 1.6;
+		color: #a3a3a3;
+		margin: 0 0 8px;
+	}
+
+	.video-meta {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		gap: 12px;
+		margin: 0;
+		font-family: Lora, 'Times New Roman', serif;
+		font-size: 14px;
+		font-style: italic;
+		color: #a3a3a3;
+	}
+
+	.video-meta a {
+		flex: none;
+		font-style: normal;
+		color: #337ab7;
+		text-decoration: none;
+	}
+
+	.video-meta a:hover {
+		color: #0085a1;
+	}
+</style>
+
+<!-- Main Content -->
+<div class="container">
+	<div class="row">
+		<div class="col-lg-10 col-lg-offset-1 col-md-10 col-md-offset-1">
+
+			{%- assign videos = site.data.videos | sort: 'date' | reverse -%}
+
+			<p class="video-channel">
+				<a href="https://www.youtube.com/@{{ site.youtube_username }}" target="_blank" rel="noopener">
+					@{{ site.youtube_username }} 频道主页 &#8599;
+				</a>
+			</p>
+
+			{%- if videos.size == 0 -%}
+			<p>还没有收录视频，去频道主页看看。</p>
+			{%- else -%}
+
+			<!-- Tags (as filter) -->
+			{%- assign tag_blob = '' -%}
+			{%- for _video in videos -%}
+			{%- for _tag in _video.tags -%}
+			{%- assign tag_blob = tag_blob | append: _tag | append: '|' -%}
+			{%- endfor -%}
+			{%- endfor -%}
+			{%- assign tag_all = tag_blob | split: '|' -%}
+			{%- assign tag_list = tag_all | uniq | sort -%}
+
+			<div id='tag_cloud' class="tags tags-sup js-tags">
+				<a class="tag-button--all" data-encode="">
+					Show All
+					<sup>{{ videos.size }}</sup>
+				</a>
+
+				{% capture tags %}
+				{% for _tag in tag_list %}
+				{%- assign _count = 0 -%}
+				{%- for _each in tag_all -%}
+				{%- if _each == _tag -%}{%- assign _count = _count | plus: 1 -%}{%- endif -%}
+				{%- endfor -%}
+				<a data-sort="{{ videos.size | minus: _count | prepend: '0000' | slice: -4, 4 }}" data-encode="{{ _tag | strip | url_encode }}" class="tag-button" title="{{ _tag }}" rel="{{ _count }}">
+					{{ _tag }}
+					<sup>{{ _count }}</sup>
+				</a>__SEPERATOR__
+				{% endfor %}
+				{% endcapture %}
+				{{ tags | split:'__SEPERATOR__' | sort }}
+			</div>
+
+			<!-- Video List -->
+			<div class="js-result d-none">
+				<section>
+					<div class="video-grid">
+						{%- for _video in videos -%}
+						{%- assign _tags = '' -%}
+						{%- for _tag in _video.tags -%}
+						{%- assign _tag_encode = _tag | strip | url_encode -%}
+						{%- if forloop.last -%}
+						{%- assign _tags = _tags | append: _tag_encode -%}
+						{%- else -%}
+						{%- assign _tags = _tags | append: _tag_encode | append: ',' -%}
+						{%- endif -%}
+						{%- endfor -%}
+
+						<div class="item video-card" data-tags="{{ _tags }}">
+							<button type="button" class="video-thumb" data-id="{{ _video.id }}" data-title="{{ _video.title | escape }}" aria-label="播放：{{ _video.title | escape }}">
+								<img src="https://i.ytimg.com/vi/{{ _video.id }}/hqdefault.jpg" alt="{{ _video.title | escape }}" loading="lazy">
+								<span class="video-play"></span>
+							</button>
+							<h2 class="video-title">{{ _video.title }}</h2>
+							{%- if _video.desc %}
+							<p class="video-desc">{{ _video.desc }}</p>
+							{%- endif %}
+							<p class="video-meta">
+								<span>{{ _video.date | date: '%Y-%m-%d' }}</span>
+								<a href="https://www.youtube.com/watch?v={{ _video.id }}" target="_blank" rel="noopener">在 YouTube 观看 &#8599;</a>
+							</p>
+						</div>
+						{%- endfor -%}
+					</div>
+				</section>
+			</div>
+			{%- endif -%}
+
+		</div>
+	</div>
+</div>
+
+<script>
+	document.addEventListener('click', function (e) {
+		var thumb = e.target.closest('.video-thumb');
+		if (!thumb) return;
+
+		var frame = document.createElement('iframe');
+		frame.src = 'https://www.youtube-nocookie.com/embed/' + thumb.getAttribute('data-id') + '?autoplay=1&rel=0';
+		frame.title = thumb.getAttribute('data-title');
+		frame.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+		frame.allowFullscreen = true;
+
+		var box = document.createElement('div');
+		box.className = 'video-embed';
+		box.appendChild(frame);
+		thumb.parentNode.replaceChild(box, thumb);
+	});
+</script>

@@ -1,0 +1,114 @@
+# YouTube videos shown on /videos/
+# id = the 11-char YouTube video ID (the v= part of the watch URL)
+# newest first is not required, the page sorts by date
+
+- id: "yJWMsjoIRJU"
+  title: "I Expanded UE5 GAS for POE-Style Mechanics! | Damage Model & Status Interactivity"
+  date: 2026-05-27
+  tags: [UE5, GAS, Tech Test]
+
+- id: "kUVlVHFXyUc"
+  title: "Unlocking Skills with Chinese Characters? | My Indie Tech & Mechanic Demo (Powered by NETT Framework"
+  date: 2026-05-26
+  tags: [UE5, Indie Game, Demo]
+
+- id: "d06pqe0_8-o"
+  title: "Titanfall Style GunPlay | New 3C Play Test | UE5"
+  date: 2026-02-17
+  tags: [UE5, 3C, FPS]
+
+- id: "JmgUKtjBH5c"
+  title: "SQD - Official Early Access Launch Trailer"
+  date: 2025-11-16
+  tags: [SQD, Trailer]
+
+- id: "pB-GeRd1Nkk"
+  title: "SQD Demo - V0.4"
+  date: 2025-07-15
+  tags: [SQD, Demo]
+
+- id: "_4hC6-t9_EY"
+  title: "GridFiller is LIVE! A Modern Twist on Tangrams – 200+ Puzzles to Solve!"
+  date: 2025-02-18
+  tags: [GridFiller, Trailer]
+
+- id: "CxZJdl6MDYU"
+  title: "SeaQuest Dungeon Demo On Steam!!"
+  date: 2025-02-05
+  tags: [SQD, Demo]
+
+- id: "6EeSuM6Jhlk"
+  title: "FPS LowPoly 3c Feeling test"
+  date: 2025-01-09
+  tags: [UE5, 3C, FPS]
+
+- id: "iXXjkkcWNE0"
+  title: "UE5 Horror Atmosphere Demo #2"
+  date: 2025-01-08
+  tags: [UE5, Horror, Demo]
+
+- id: "h6uJy7Og0-o"
+  title: "UE5 Horror Atmosphere Demo"
+  date: 2025-01-07
+  tags: [UE5, Horror, Demo]
+
+- id: "b0d-YoITEhc"
+  title: "3C Test  - Top Down Roguelike Dungeon Demo"
+  date: 2025-01-07
+  tags: [UE5, 3C, Roguelike]
+
+- id: "H3SufIL0kMo"
+  title: "SeaQuestDungeon  Demo speedrun in 6:05"
+  date: 2024-09-08
+  tags: [SQD, Demo]
+
+- id: "ga7Meysnp8w"
+  title: "[UE5] New Project Test Demo /AI logic combination #2"
+  date: 2023-11-01
+  tags: [UE5, AI, Demo]
+
+- id: "iPFsBldQOe0"
+  title: "[UE5] TPS shoot game /AI logic combination #1"
+  date: 2023-10-31
+  tags: [UE5, AI, TPS]
+
+- id: "ZANMyckl8sE"
+  title: "[UE5] TPS Shoot game /UE5 の新しいテスト デモ"
+  date: 2023-10-31
+  tags: [UE5, TPS, Demo]
+
+- id: "-ZtAVkvZJsE"
+  title: "UE5# TPS Shoot Gmae Lyra System"
+  date: 2023-09-30
+  tags: [UE5, TPS, Tech Test]
+
+- id: "re0vXkcrxJs"
+  title: "TZA AKM WeaponShowcase"
+  date: 2019-04-29
+  tags: [UE4, Tech Test]
+
+- id: "YvUnn1054Lg"
+  title: "Unreal Engine 4 viking project [survive MMO ]"
+  date: 2019-02-26
+  tags: [UE4, Demo]
+
+- id: "rf8hu_TUCjw"
+  title: "Unreal engine 4   Material  Waterfall"
+  date: 2019-02-13
+  tags: [UE4, Material]
+
+- id: "X6BVwVvrmns"
+  title: "UE4 TPS shoot game  new test"
+  date: 2019-01-19
+  tags: [UE4, TPS, Tech Test]
+
+- id: "24eH3JFiTIE"
+  title: "Physical bullet for ue4  logic test"
+  date: 2018-03-25
+  tags: [UE4, Tech Test]
+
+- id: "E2Otou_hAqI"
+  title: "Ue4 TPS Shoot Game Test"
+  date: 2018-02-23
+  tags: [UE4, TPS, Tech Test]
+
