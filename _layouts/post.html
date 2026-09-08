@@ -25,6 +25,11 @@ layout: default
                     {% include multilingual-sel.html %}
                 {% endif %}
 
+                <!-- Auto Translate (EN / JA) -->
+                {% unless page.no-translate %}
+                    {% include auto-translate.html %}
+                {% endunless %}
+
 				{{ content }}
 
                 <hr style="visibility: hidden;">
