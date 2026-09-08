@@ -44,7 +44,9 @@ Epic 自己也写明了这套东西的定位：
 
 翻译一下：**这是给引擎组自己看的原型，不是给你抄进项目的模板。** 但它把"状态机内部用 Blend Stack、并且能优雅处理状态重入"这个问题解得挺漂亮，值得拆开看。
 
-本文所有截图来自 `SandboxCharacter_CMC_ABP` / `SandboxCharacter_Mover_ABP` 的 `State Machine (Experimental)` 图层，Epic 原注释我原文引用并逐句解释。引擎侧 API 签名来自 UE 5.8 安装目录的插件源码，可核对。
+本文所有截图来自 `SandboxCharacter_CMC_ABP` / `SandboxCharacter_Mover_ABP` 的 `State Machine (Experimental)` 图层，Epic 原注释我原文引用并逐句解释。引擎侧 API 签名与转换配置项的语义来自 UE 5.8 安装目录的源码，可核对。
+
+**如果你只想看一个问题的答案**：状态机 Details 面板里 `Allow Inertialization for Self Transitions` 为什么有的勾有的不勾、`Transition Notifications` 为什么只填 Start —— 直接跳 **6.10 / 6.11**。
 
 ---
 
@@ -777,7 +779,7 @@ Result | Enum(Or) State Machine State | Float Range Speed 2D | Float Range Futur
 | `MMCostLimit` | 0.0 | 0 = 不设代价门槛 |
 | `Blend Time` | 0.2 | 混合时长 |
 | `Blend Profile` | `FastFeet_FastRoot` | 混合曲线（按骨骼加权） |
-| `Tags` | 1 元素 | 元数据标签，供 4.4 的扩展用 |
+| `Tags` | 1 元素 | 元数据标签，供转换规则和 3.3 的扩展用 |
 
 `Blend Profile = FastFeet_FastRoot` 是个很实用的细节：**脚和 root 混合得快、上身混合得慢**。转身/起步这类动画，脚必须马上到位（否则滑步），上身可以慢慢摆过去（更自然）。这比全身统一 blend time 好得多。
 
@@ -914,9 +916,46 @@ Return
 
 ---
 
-# 第六部分：状态机侧的三类回调
+# 第六部分：状态机的图、回调与转换配置
 
-## 6.1 OnStateEntry：最简形态
+这一部分回答三个问题：**这个逻辑状态机长什么样**、**回调里干了什么**、**Details 面板那堆开关为什么有的勾有的不勾**。
+
+## 6.1 状态机全图
+
+先看三个状态组。
+
+[![](/img/in-post/gasp-sm/60-sm-idle-states.png)](/img/in-post/gasp-sm/60-sm-idle-states.png)
+<small class="img-hint">Idle States：Entry → Transition to Idle → Idle Loop，Idle Loop 与 Idle Break 互跳（91% / 9%）</small>
+
+```text
+Entry ─────────────────────► Transition to Idle ──► Idle Loop ⇄ Idle Break
+Locomotion -> Idle ────────►        ▲
+-> Grounded ──► Conduit ───►        │
+                              Re-Enter（自转换，两条规则）
+```
+
+[![](/img/in-post/gasp-sm/61-sm-locomotion-states.png)](/img/in-post/gasp-sm/61-sm-locomotion-states.png)
+<small class="img-hint">Locomotion States：结构一致，但 Re-Enter 上挂了四条规则</small>
+
+```text
+Idle -> Locomotion ──► Transition to Locomotion ──► Locomotion Loop
+                              ▲
+                       Re-Enter（自转换，四条规则）
+```
+
+[![](/img/in-post/gasp-sm/62-sm-in-air-states.png)](/img/in-post/gasp-sm/62-sm-in-air-states.png)
+<small class="img-hint">In Air States：最简形态，没有 Re-Enter</small>
+
+**三个共同的模式：**
+
+**① 每个状态组都是"过渡状态 + 循环状态"两个一对。** `Transition to X` 负责播一次性动画（起步 / 落地 / 转身），`X Loop` 负责循环。所有 `OnStateEntry` 都是给这两类状态写的。
+
+**② 用 Conduit 做多入口汇聚。** `-> Grounded` 这条外部转换先进 Conduit，再由 Conduit 分派到 Idle 或 Locomotion。Conduit 不持有姿态、不做混合，只透传条件——引擎里它有一条额外的 entry rule，必须先为真才会考虑经由它的任何转换。
+
+**③ `Re-Enter` 是自转换（self transition）。** 这个胶囊节点的箭头指回它自己所在的那个过渡状态。它是这整套方案里最关键的一个机制，也是下面 6.9 / 6.10 两节的主角。注意 Locomotion 侧挂了**四条**规则（图上四个叠起来的箭头图标），Idle 侧两条，In Air 一条都没有——复杂度差异一眼可见。
+
+## 6.2 OnStateEntry：最简形态
+
 
 [![](/img/in-post/gasp-sm/55-onstateentry-idleloop.png)](/img/in-post/gasp-sm/55-onstateentry-idleloop.png)
 <small class="img-hint">OnStateEntry_IdleLoop：一个节点，两个参数</small>
@@ -928,7 +967,7 @@ OnStateEntry_IdleLoop
 
 **循环状态的 `Force Blend` 不勾**（原因见 3.8）。整个函数就这一个节点——状态机侧的代码量极小，全部逻辑都在那个共用函数里。
 
-## 6.2 OnStateEntry：过渡状态要多存一个快照
+## 6.3 OnStateEntry：过渡状态要多存一个快照
 
 [![](/img/in-post/gasp-sm/56-onstateentry-transition-to-locomotion.png)](/img/in-post/gasp-sm/56-onstateentry-transition-to-locomotion.png)
 <small class="img-hint">OnStateEntry_TransitionToLocomotion：先存 TargetRotationOnTransitionStart，再选动画，Force Blend 勾上</small>
@@ -946,7 +985,7 @@ OnStateEntry_TransitionToLocomotion
 
 **② `Force Blend` 勾上。** 过渡动画必须每次都从头（或 MM 指定的入点）重新混合进来，连续两次同向 pivot 才不会失效。
 
-## 6.3 OnUpdate：把快照慢慢追上来
+## 6.4 OnUpdate：把快照慢慢追上来
 
 这是全套里唯一的 `OnUpdate_` 函数。
 
@@ -985,7 +1024,7 @@ OnStateEntry_TransitionToLocomotion
 
 > **这是一个低通滤波器（low-pass filter）**，只不过写在动画蓝图里。`RInterpTo` + "和实时值比差"这个组合，是"检测突变、忽略缓变"的通用手法，比"记住 N 帧前的值再比"稳定得多，也不用存历史。插值速度 5.0 大约对应 200ms 的时间常数。
 
-## 6.4 IsAnimationAlmostComplete：过渡状态的自然出口
+## 6.5 IsAnimationAlmostComplete：过渡状态的自然出口
 
 [![](/img/in-post/gasp-sm/07-is-animation-almost-complete.png)](/img/in-post/gasp-sm/07-is-animation-almost-complete.png)
 <small class="img-hint">非循环 且 剩余时间 ≤ 0.75s</small>
@@ -1008,12 +1047,295 @@ Convert to Blend Stack Node( State Machine Blend Stack )
 
 **③ Epic 自己给出了改进方向**：把这个值加进 `S_ChooserOutputs`，让每条动画自己声明。**如果你要把这套方案往产品化推进，这是第一个该改的地方**——用固定值意味着所有过渡动画的尾巴必须一样长。
 
-这个函数配合 `NoValidAnim`，构成了过渡状态的两个出口：
+这个函数配合 `NoValidAnim`，构成了过渡状态的出口（下一节会看到还有第三个）：
 
 ```text
 过渡状态 ──┬── IsAnimationAlmostComplete → 正常打完，进 Loop
            └── NoValidAnim               → 一开始就选不出来，直接退回
 ```
+
+## 6.6 转换规则总览
+
+这个状态机上的规则一共五类，全部只读变量、不产生副作用：
+
+| # | 规则 | 挂在哪 | 作用 |
+|---|---|---|---|
+| ① | `IsAnimationAlmostComplete AND StateTime > 0` | 过渡 → 循环 | 手写的 Automatic Rule |
+| ② | `NoValidAnim OR BlendStackInputs.Loop` | 过渡 → 循环 | 跳过过渡，直奔循环 |
+| ③ | `Stance != StanceLastFrame AND StateTime > 0` | Idle 的 Re-Enter | 状态量变了，重选 |
+| ④ | `(Dir\|Stance\|Gait 任一变) AND StateTime > 0` | Locomotion 的 Re-Enter | 同上 |
+| ⑤ | `IsPivoting / ShouldTurnInPlace + 条件化时间门槛` | Re-Enter | 特殊动作重触发 |
+
+**注意每条规则里都有一个 `Current State Time > X`**——这不是可选的装饰，是这套自转换机制能跑起来的必要条件，6.9 节讲原因。
+
+## 6.7 ①：手写 Automatic Rule
+
+[![](/img/in-post/gasp-sm/63-rule-animation-almost-complete.png)](/img/in-post/gasp-sm/63-rule-animation-almost-complete.png)
+<small class="img-hint">过渡状态 → 循环状态：IsAnimationAlmostComplete AND CurrentStateTime > 0.0</small>
+
+> This acts similar to the "Automatic Rule" condition in typical state machines, which triggers the transition automatically whenever the animation is almost over. Since this state machine is purely logical and contains no animations, we need to do this manually by looking at the current animation in the blendstack.
+
+**这段注释解释了 Details 面板里两个字段为什么是关着的：**
+
+```text
+Automatic Rule Based on Sequence Player in State  →  ☐ 未勾
+Automatic Rule Trigger Time                       →  -1.0 s（关闭）
+```
+
+引擎自带的 Automatic Rule 是这么工作的（引擎注释原文）：
+
+> Try setting the rule automatically based on **most relevant asset player node's remaining time** and the Automatic Rule Trigger Time of the transition
+
+关键词是 **asset player node**。这个状态机的状态里**一个 sequence player 都没有**（姿态在外面的 Blend Stack 上），所以引擎找不到任何 asset player，Automatic Rule 直接失效。只能手写：去问 Blend Stack "你现在播的那条还剩多久"（6.5 节）。
+
+> **这是"状态机不出姿态"这个设计付出的第一个代价**：所有依赖"状态内部有动画"的引擎特性全部失效——Automatic Rule、Sync Group、状态自身的动画通知，都得自己补。
+
+## 6.8 ②：选不到，或者循环动画赢了
+
+[![](/img/in-post/gasp-sm/64-rule-novalidanim-or-loop.png)](/img/in-post/gasp-sm/64-rule-novalidanim-or-loop.png)
+<small class="img-hint">NoValidAnim OR BlendStackInputs.Loop</small>
+
+> If no animations were found when entering into the transition state, this transition takes us straight to the looping state.
+>
+> In addition, if a looping animation was chosen when searching for transition animations, then that should force us into the looping state. **This allows us to do things like perform a motion match between a transition and a looping animation. If the looping animation wins, we enter into the looping state.**
+
+第一句就是 3.5 节那个降级出口。**第二句是新东西，很妙：**
+
+```text
+Chooser 输出 = [ 起步动画A , 起步动画B , 循环动画 ]   ← 三条一起进 ValidAnims
+        ↓  单帧 MM 在三条里搜
+若循环动画的代价最低（当前姿态已经很像跑起来的样子）
+        ↓  BlendStackInputs.Loop == true
+规则 ② 成立 → 状态机立刻从"过渡状态"转到"循环状态"
+```
+
+**这等于让 Motion Matching 去决定"这次到底要不要播过渡动画"。** 起步的时候如果角色姿态已经接近跑动中段（比如从翻越落地下来），那就没必要再播一遍起步——直接进循环更自然。
+
+注意这里状态机和 Blend Stack 的分工：**Blend Stack 已经在播循环动画了，状态机只是把自己的逻辑状态改成一致**。规则 ② 不是"去播循环"，而是"承认已经在播循环了"。这种"状态跟随实际播放内容"的写法，只有在姿态与状态解耦之后才可能。
+
+## 6.9 ③④⑤：Re-Enter 自转换
+
+三条规则的形状一样：**"某个决策输入变了" AND "当前状态已经跑了一会儿"**。
+
+### ③ Idle：Stance 变了
+
+[![](/img/in-post/gasp-sm/65-rule-idle-state-changed.png)](/img/in-post/gasp-sm/65-rule-idle-state-changed.png)
+<small class="img-hint">Stance != Stance Last Frame AND CurrentStateTime > 0.0</small>
+
+> If any of these states have changed, we know we need to reselect an idle animation. Therefore, transition to (or re-start) the "Transition to Idle Loop" state.
+>
+> Checking to see if the current state time is greater than 0 prevents this transition from firing multiple times per frame.
+
+### ④ Locomotion：方向 / 姿态 / 步态 任一变了
+
+[![](/img/in-post/gasp-sm/66-rule-locomotion-state-changed.png)](/img/in-post/gasp-sm/66-rule-locomotion-state-changed.png)
+<small class="img-hint">三组 != 取 OR，再 AND 上时间门槛</small>
+
+```text
+( MovementDirection != MovementDirectionLastFrame )
+OR ( Stance != StanceLastFrame )
+OR ( Gait   != GaitLastFrame )
+AND ( CurrentStateTime > 0.0 )
+```
+
+**`xxxLastFrame` 这批变量的用途终于闭环了**：2.1 节存了 `MovementDirectionLastFrame`，就是给这条规则用的。方向从 F 变成 LL，说明该换一批方向动画了 → 重入过渡状态 → 重跑一次 Chooser + MM。
+
+### ⑤ Pivot：条件化的时间门槛
+
+[![](/img/in-post/gasp-sm/67-rule-pivoting.png)](/img/in-post/gasp-sm/67-rule-pivoting.png)
+<small class="img-hint">IsPivoting AND CurrentStateTime > ( Tags 含 Pivot/Start ? 0.5 : 0.0 )</small>
+
+> If "Is Pivoting" is true, and we are not playing the beginning of a pivot or start animation, then transition into the "Transition to Locomotion Loop" state. Since "Is Pivoting" is also used in the chooser, a pivoting animation will likely be chosen.
+>
+> If other conditions in the chooser prevent a pivot from being chosen, or no pivot animation is found, then the transition state will be skipped. **HOWEVER, as long as the "Is Pivoting" condition is true and no pivot animation is playing, this transition will trigger once per frame, allowing a pivot to be selected if conditions change on subsequent frames.**
+
+```text
+门槛 = Select( Index = Tags.Contains("Pivot") OR Tags.Contains("Start") ,
+               True  = 0.5 ,      ← 正在播 pivot/start：至少让它播 0.5s 再考虑重触发
+               False = 0.0 )      ← 没在播：立刻可以触发
+条件 = IsPivoting AND ( CurrentStateTime > 门槛 )
+```
+
+**加粗那句是这套机制最强的一点：自转换变成了一个每帧重试的循环。**
+
+```text
+第 N 帧  ：IsPivoting=true → 重入过渡状态 → Chooser 选不到 pivot
+          → NoValidAnim=true → 规则② 把你退回 Locomotion Loop
+第 N+1 帧：IsPivoting 还是 true，Loop 里没在播 pivot（门槛=0.0）
+          → 再重入一次 → 再试一次
+...
+第 N+k 帧：速度/角度终于进了某一行的区间 → 选到了 → 真的播出来
+```
+
+**这是"持续尝试直到条件满足"，而不是"错过就算了"。** 传统状态机做这件事要么加一个"等待"状态，要么在转换条件里塞一堆容错。这里靠"自转换 + NoValidAnim 立刻退回"两条规则就实现了，而且完全没有额外状态。
+
+代价是**每帧都在跑 Chooser + 单帧 MM**——性能上不能算便宜。真要上产品，得给这个重试加节流（比如按 0.05s 间隔）。
+
+### ⑤' TurnInPlace：同样的形状
+
+[![](/img/in-post/gasp-sm/68-rule-turn-in-place.png)](/img/in-post/gasp-sm/68-rule-turn-in-place.png)
+<small class="img-hint">ShouldTurnInPlace AND CurrentStateTime > ( Tags 含 TurnInPlace ? 0.75 : true )</small>
+
+> This transition is very similar to the pivot transition in the locomotion states. If "Should Turn in Place" is true, and we are not playing the beginning of a TurnInPlace animation, then transition into the "Transition to Idle Loop" state. Since "ShouldTurnInPlace" is also used in the chooser, a turn in place animation will be chosen.
+>
+> If we play more than .75 seconds of a turn, and "Should Turn in Place" is still true, then we should re-trigger a turn in place animation. At the moment, all of our turn in place animations have a similar turning duration, which lets us use a fixed time.
+
+```text
+条件 = ShouldTurnInPlace AND
+       Select( Index = Tags.Contains("TurnInPlace") ,
+               True  = CurrentStateTime > 0.75 ,   ← 已经在转：转够 0.75s 才允许再转一次
+               False = true )                      ← 没在转：立刻可以转
+```
+
+语义是"**转身没转够就再来一次**"：一次转身动画大约转 90°，玩家要转 180° 就需要连着触发两次。`Tags` 里的 `TurnInPlace` 标记让规则能问"我现在是不是正在转"——**这就是 3.6 节把 `Tags` 写进 `BlendStackInputs` 的用处**，转换规则拿它当"当前在播什么类别"的判据，不用去比对资产名。
+
+注意 Epic 自己标了这里的妥协：*"all of our turn in place animations have a similar turning duration, which lets us use a fixed time"*——`0.75` 这个数字只在"所有转身动画时长接近"的前提下成立。跟 6.5 节的 `0.75` 一样，正确做法是加进 `S_ChooserOutputs` 让每条动画自己声明。
+
+## 6.10 关键配置：Allow Inertialization for Self Transitions
+
+这是本节最值得讲清楚的一个开关。先看两张 Details 面板的对比。
+
+[![](/img/in-post/gasp-sm/69-transition-details-self-inertialization.png)](/img/in-post/gasp-sm/69-transition-details-self-inertialization.png)
+<small class="img-hint">Re-Enter 上的 "Idle - State Changed" 规则：Allow Inertialization for Self Transitions ✔ 勾上</small>
+
+[![](/img/in-post/gasp-sm/70-transition-details-almost-complete.png)](/img/in-post/gasp-sm/70-transition-details-almost-complete.png)
+<small class="img-hint">"General - Animation Almost Complete" 规则：同一个开关 ☐ 不勾</small>
+
+```text
+规则 Idle - State Changed           →  Allow Inertialization for Self Transitions = ✔
+规则 General - Animation Almost Complete →  同一个开关 = ☐
+```
+
+### 引擎里它到底是什么
+
+`Engine/Source/Editor/AnimGraph/Public/AnimStateTransitionNode.h`：
+
+```cpp
+/** Whether to fall back to inertialization/dead blending when reentering an already-active state.
+    This can avoid pops.
+    The target state must enable bAlwaysResetOnEntry for the inertial blend to trigger. */
+UPROPERTY(EditAnywhere, Category="Transition|Experimental")
+bool bAllowInertializationForSelfTransitions;
+```
+
+**默认 `false`**（`AnimStateTransitionNode.cpp` 里注释写明 `// Defaults to false`，为了保持旧行为）。
+
+从名字看它像个"混合方式"的开关，但**它真正的第一个作用是"准不准转"**。`AnimNode_StateMachine.cpp` 里找有效转换的地方：
+
+```cpp
+// If transition is valid and not waiting on other conditions
+// and we're not doing a transition to self, unless the self-transition can inertialize
+if (PotentialTransition.TargetState != CurrentState
+    || ReferenceTransition.bAllowInertializationForSelfTransitions)
+{
+    return true;
+}
+return false;
+```
+
+翻译：**目标状态 == 当前状态（也就是自转换）时，这个开关不勾，转换直接被拒。**
+
+第二个作用才是名字说的那件事——真的重入了、并且目标状态权重还大于 0、并且目标状态勾了 `Always Reset on Entry` 时，向上游发一个 `RequestInertialization`，用惯性混合盖掉硬重置造成的 pop。
+
+### 所以为什么有的勾有的不勾
+
+答案很干脆：**看这条转换是不是自转换。**
+
+| 转换 | 源 → 目标 | 自转换？ | 开关 | 原因 |
+|---|---|---|---|---|
+| `Idle - State Changed`（Re-Enter） | `Transition to Idle` → **它自己** | ✅ 是 | **必须 ✔** | 不勾的话这条规则永远不会生效 |
+| `Locomotion - State Changed`（Re-Enter） | `Transition to Locomotion` → **它自己** | ✅ 是 | **必须 ✔** | 同上 |
+| `IsPivoting` / `ShouldTurnInPlace`（Re-Enter） | 同上 | ✅ 是 | **必须 ✔** | 同上 |
+| `General - Animation Almost Complete` | `Transition to X` → `X Loop` | ❌ 不是 | **☐ 无所谓** | 普通 A→B，引擎根本不看这个开关 |
+| `NoValidAnim OR Loop` | `Transition to X` → `X Loop` | ❌ 不是 | **☐ 无所谓** | 同上 |
+
+**不是"勾上更好、不勾更省"，而是"自转换必须勾，非自转换勾了也没用"。** 留 `false` 是保持默认值，等于显式声明"这条不是自转换"。
+
+> **一句话记住**：`Allow Inertialization for Self Transitions` 是 UE 里**开启"状态重入"能力的唯一开关**。它的名字只描述了副作用（惯性混合），没描述主作用（放行自转换）——这是个容易踩的命名坑。
+
+### 为什么这里的惯性混合是"顺带的"
+
+回头看 1.1 节的 AnimGraph：状态机的姿态被 Two Way Blend 丢掉了，**所以自转换触发的惯性混合对画面毫无影响**——真正的混合发生在 Blend Stack 上（3.8 节的 `ForceBlendOnNextUpdate`）。
+
+也就是说 **GASP 用这个开关，只用它的"放行"作用，不用它的"混合"作用。**
+
+那 AnimGraph 里那个 `Inertialization` 节点（`State Controller → Inertialization → Two Way Blend[A]`）是干什么的？**推断**：引擎在找不到上游 `IInertializationRequester` 时会打错误日志（`LogInertializationRequestError`）。自转换每帧都可能发请求，挂一个 Inertialization 节点在那里把请求接住，即使姿态被丢弃也不会刷日志。**这是那个"看起来多余的节点"的合理解释**——如果你照搬这套结构却把它删了，可能会看到 Inertialization 相关的报错。
+
+### 顺带解释 `Current State Time > 0` 为什么管用
+
+自转换成立时，引擎走的是 `SetState(..., bAllowReEntry = true)` 这条路，里面会**重置状态的 elapsed time**（并按需重新 `Initialize` 状态、重跑 `OnStateEntry`）。所以：
+
+```text
+重入发生的那一帧 → CurrentStateTime 归 0 → 规则里的 ( > 0.0 ) 为假 → 当帧不会再次触发
+下一帧          → CurrentStateTime > 0 → 条件重新可用
+```
+
+Epic 注释说的 *"prevents this transition from firing multiple times per frame"* 就是这个机制。**它同时也是 6.9 节⑤那个"每帧重试一次"的节拍来源**——一帧最多重入一次，不会同一帧里死循环。
+
+> **等价写法**：Details 面板里的 `Min Time Before Re-entry` 设成 `0` 也能达到"至少等一帧"（引擎注释：*When set to zero, wait at least one frame before re-entry via this transition is allowed*）。GASP 没用它而是手写时间比较，原因是**门槛需要按条件变**（0 / 0.5 / 0.75），一个常量表达不了。
+
+## 6.11 关键配置：Transition Notifications
+
+[![](/img/in-post/gasp-sm/71-notifications-to-idle.png)](/img/in-post/gasp-sm/71-notifications-to-idle.png)
+<small class="img-hint">Transition Start = "Transition: To Idle"，End 与 Interrupt 都是 None</small>
+
+[![](/img/in-post/gasp-sm/72-notifications-locomotion-to-idle.png)](/img/in-post/gasp-sm/72-notifications-locomotion-to-idle.png)
+<small class="img-hint">另一条：Transition Start = "Transition: Locomotion To Idle"</small>
+
+### 引擎里的三个字段
+
+```cpp
+UPROPERTY(EditAnywhere, Category=Events) FAnimNotifyEvent TransitionStart;
+UPROPERTY(EditAnywhere, Category=Events) FAnimNotifyEvent TransitionEnd;
+UPROPERTY(EditAnywhere, Category=Events) FAnimNotifyEvent TransitionInterrupt;
+```
+
+它们编译时会被烤成通知索引，运行时通过 `AddAnimNotifyFromGeneratedClass()` 丢进**和普通动画通知同一个 `NotifyQueue`**。也就是说它们就是标准 AnimNotify——可以用 `AnimNotify_<名字>` 事件或 Event Graph 节点接住，也会出现在 Rewind Debugger 的时间轴上。
+
+三者的触发时机（引擎源码 `AnimNode_StateMachine.cpp`）：
+
+| 通知 | 什么时候发 |
+|---|---|
+| **Start** | 转换开始时（与状态自身的 Entry/Exit 通知一起发） |
+| **Interrupt** | **上一条还没混完的转换**被新转换取代时，发给**被取代的那条** |
+| **End** | 该转换混合真正结束、且它是栈里最新的一条时 |
+
+### 为什么只填了 Start
+
+**① 因为这是这个状态机唯一能对外发的事件。** 状态里没有动画（6.7 节），所以拿不到任何动画通知；`FoleyEvent`、`contact_l/r` 这些都挂在 Blend Stack 播的资产上，跟状态机无关。**转换通知是逻辑状态机与外部世界之间唯一的事件出口。**
+
+**② 命名带前缀是刻意的。** `Transition: To Idle` / `Transition: Locomotion To Idle` ——加 `Transition:` 前缀是为了在 Event Graph 的通知列表和 Rewind Debugger 时间轴里一眼区分"这是状态机发的"而不是"动画发的"。名字全局唯一，所以必须把源状态写进去（`Locomotion To Idle` vs `To Idle`）。
+
+**③ End 在这里没有意义。** `End` 的语义是"这条转换的**混合**结束了"。但这个状态机的混合是虚的——姿态被 Two Way Blend 丢掉，画面上真正的混合由 Blend Stack 按自己的 `BlendTime` 走，两者时间线不同步。**订阅一个和画面无关的时间点没有价值**，所以留 None。
+
+**④ Interrupt 语义容易误解，且这里用不上。** 它不是"状态被打断"，而是"这条转换的混合还没走完就被更新的转换顶掉了"。在这套设计里，转换本身是瞬时的逻辑动作，"混合被顶掉"不对应任何需要处理的情况。
+
+**⑤ 留 None 是有实际收益的**：没填的通知不会入队，省掉一次通知分发。虽然单次开销很小，但这个状态机每帧都可能重入（6.9 节），累积起来不算噪音。
+
+> **想用起来的话**，Start 通知是很好的挂钩点：切镜头、播音效（起步的布料声）、给 gameplay 发"角色开始移动了"。**注意它在动画线程队列里排队、在游戏线程分发**，所以适合做"通知型"逻辑，不适合做需要同帧生效的判断。
+
+## 6.12 其余配置项速查
+
+Details 面板里剩下的字段，配合引擎注释一次看完（引号内为引擎原文）：
+
+| 字段 | GASP 的值 | 引擎语义 / 为什么是这个值 |
+|---|---|---|
+| `Priority Order` | `1` | *"the one with the **smallest** priority order will take precedent"*。数字小 = 先判。编译期按它排序，运行时逐条求值、取第一条成立的 |
+| `Bidirectional` | ☐ | *"This transition can go both directions"*，但**引擎尚未实现**——编译时会警告 `Bidirectional transitions aren't supported yet`。**永远不要勾** |
+| `Blend Logic` | `Standard Blend` | *"Blend smoothly from source state to destination state. Both states update during the transition. **Falls back to Inertialization on re-entry to an already active state when Fall Back to Inertialization is true**"*。最后一句直接对应 6.10 那个开关 |
+| `Transition Rule Sharing` | `Idle - State Changed` / `General - Animation Almost Complete` | 规则被多条转换共享并起名。`General -` 前缀表示跨状态组复用（4 个状态组的"动画快播完"用的是同一条规则），改一处全生效 |
+| `Automatic Rule Based on Sequence Player in State` | ☐ | 依赖状态内的 asset player，这里没有 → 失效，手写替代（6.7） |
+| `Automatic Rule Trigger Time` | `-1.0 s` | 上一条关掉后无意义 |
+| `Min Time Before Re-entry` | `-1.0 s` | *"Has no effect when set to -1.0. When set to zero, wait at least one frame"*。关掉，改用规则里的条件化时间门槛（6.10 末） |
+| `Sync Group Name to Require Valid Markers Rule` | `None` | 要求同步组有有效 marker 才允许转换。这里不靠同步组驱动 |
+| `Disabled` | ☐ | 勾上则**编译时直接丢弃**这条转换（不是运行时跳过） |
+| `Only Evaluate when Active` | ☐ | *"this transition rule will not be evaluated when the state machine's update context is inactive (e.g. when blending out)"*。这个状态机靠 `Always Update Children` 恒定被更新，勾不勾差别很小 |
+
+**另外，图上那个 `Conduit`（6.1 节）在引擎里有两条特殊规则值得知道：**
+
+- Conduit 自带一条 **entry rule**，必须先为真，才会考虑经由它的任何转换（*"Conduit 'states' have an additional entry rule which must be true to consider taking any transitions via the conduit"*）；
+- **从 Conduit 出发的转换不会产生混合**——引擎判断源状态是 Conduit 时就不往活动转换栈里压东西。所以 Conduit 是"零成本分流"，用来汇聚多个入口特别合适。
+
 
 ---
 
@@ -1211,13 +1533,27 @@ static void AddChooserStructInputOutput(FChooserEvaluationContext& Context, int3
 
 **验证**：让 Chooser 同时输出 Lfoot/Rfoot 两条起步动画，来回起步应该自动交替脚。不交替就是 Branch In 没打或 Pose History 名字对不上。
 
-## 8.6 第五步：补齐播放期
+## 8.6 第五步：加自转换（状态重入）
+
+```text
+① 在过渡状态上拉一条转换回它自己（自转换）
+② 该转换的 Details 面板里勾上
+     Transition | Experimental | Allow Inertialization for Self Transitions   ← 不勾则永不生效
+③ 规则写成：某个决策变量变了 AND CurrentStateTime > 0
+④ 确认 AnimGraph 里状态机上游有 Inertialization（或 Dead Blending）节点，
+   否则自转换的惯性混合请求会打错误日志
+```
+
+**验证**：连续两次同向 pivot、或走→蹲走切换时，动画应该重新选一次。没反应就是第 ② 步没勾（6.10 节）。
+
+## 8.7 第六步：补齐播放期
 
 ```text
 ① 过渡状态的 OnStateEntry 传 ForceBlend = true，循环状态传 false
 ② 加 IsAnimationAlmostComplete 作为过渡→循环的转换条件
-③ 需要的话再加 Get_DynamicPlayRate（或直接用 MM 返回的 WantedPlayRate）
-④ 加 Steering 节点 + TargetRotation，把方向覆盖补上
+③ 加 NoValidAnim OR BlendStackInputs.Loop 作为"跳过过渡"的转换条件
+④ 需要的话再加 Get_DynamicPlayRate（或直接用 MM 返回的 WantedPlayRate）
+⑤ 加 Steering 节点 + TargetRotation，把方向覆盖补上
 ```
 
 ---
@@ -1229,12 +1565,21 @@ static void AddChooserStructInputOutput(FChooserEvaluationContext& Context, int3
 | 问题 | 出处 | 影响 |
 |---|---|---|
 | Chooser 输出数组时**只返回第一个有效输出结构体** | 3.5 节注释 | 同组候选的混合参数必须一致 |
-| `IsAnimationAlmostComplete` 用固定 0.75s | 6.4 节注释 | 所有过渡动画尾巴长度必须接近 |
+| `IsAnimationAlmostComplete` 用固定 0.75s | 6.5 节注释 | 所有过渡动画尾巴长度必须接近 |
+| 原地转身重触发也用固定 0.75s | 6.9 节注释 | 所有转身动画时长必须接近 |
 | 曲线资产查询**不是线程安全**的 | 2.4 节注释 | 必须走"假动画存曲线"的绕法 |
 | `Previous_BlendStackInputs` 存了但没用 | 3.3 节注释 | 转换矩阵是留白，不是成品 |
+| `Bidirectional` 转换引擎尚未实现 | 引擎编译警告 | 勾了会收到 warning，行为不变 |
+| 状态里没有 asset player | 6.7 节注释 | Automatic Rule / Sync Group 等引擎特性全部失效 |
 | 整套工作流 "far from ideal" | 开篇注释 | **别直接产品化** |
 
-## 9.2 排查清单
+## 9.2 我自己想指出的两处成本
+
+**① 自转换重试是每帧跑 Chooser + MM。** 6.9 节那个"IsPivoting 为真就每帧重入一次"的机制很优雅，但它意味着在整个 pivot 意图持续期间，每帧都要求值一次 Chooser 表并做一次单帧 Motion Matching。角色数量一多，这是实打实的开销。产品化要加节流。
+
+**② 状态机的混合参数全是死的。** 因为姿态被丢弃，`Crossfade Duration`、`Blend Logic`、Blend Settings 那一整组在这套设计里都不影响画面——**但它们仍然会被求值**。这也意味着新人接手时会对着一堆"改了没反应"的参数困惑，最好在图上写注释说明。
+
+## 9.3 排查清单
 
 按出现频率排序：
 
@@ -1250,17 +1595,24 @@ static void AddChooserStructInputOutput(FChooserEvaluationContext& Context, int3
 → Two Way Blend 的 Always Update Children 没勾
 ```
 
-**③ 连续同向 pivot 第二次没反应**
+**③ Re-Enter（自转换）规则怎么写都不触发**
+```text
+→ 该转换的 Allow Inertialization for Self Transitions 没勾（6.10 节）
+  ★ 这是自转换唯一的放行开关，默认 false
+→ 规则里的 CurrentStateTime > 0 写成了 >= 0（会同帧反复触发）
+```
+
+**④ 连续同向 pivot 第二次没反应**
 ```text
 → 该状态的 ForceBlend 没传 true（3.8 节）
 ```
 
-**④ 循环动画偶发抖动 / 从头重播**
+**⑤ 循环动画偶发抖动 / 从头重播**
 ```text
 → 循环状态的 ForceBlend 误传了 true
 ```
 
-**⑤ MM 永远选不到，NoValidAnim 一直为真**
+**⑥ MM 永远选不到，NoValidAnim 一直为真**
 ```text
 → 候选动画上没打 Pose Search: Motion Matched Branch In
 → Branch In 通知里没指定 Database
@@ -1268,32 +1620,50 @@ static void AddChooserStructInputOutput(FChooserEvaluationContext& Context, int3
 → MMCostLimit 设得太小
 ```
 
-**⑥ 方向枚举高频跳变**
+**⑦ 方向枚举高频跳变**
 ```text
 → Get_MovementDirectionThresholds 的迟滞没生效
    （MovementDirectionLastFrame 有没有在 Update 开头就存）
 ```
 
-**⑦ 播放速率飞掉 / 角色瞬移般加速**
+**⑧ 播放速率飞掉 / 角色瞬移般加速**
 ```text
 → movedata_speed 曲线缺失或起步段接近 0，分母保护被绕过
 → Min/Max 曲线值异常
 ```
 
-**⑧ 状态机一帧内连跳好几个状态**
+**⑨ 状态机一帧内连跳好几个状态**
 ```text
 → 事件型 bool 没在 OnStateEntry 复位（3.4 节）
+→ 转换规则里漏了 CurrentStateTime > 0 这一半
 ```
 
-## 9.3 调试手段
+**⑩ 输出日志里刷 Inertialization 相关错误**
+```text
+→ 状态机上游没有 Inertialization / Dead Blending 节点，
+   自转换的惯性混合请求找不到接收者（6.10 节）
+```
+
+**⑪ 过渡状态被完全跳过，起步动画从来不播**
+```text
+→ 规则 ② 的 BlendStackInputs.Loop 一直为真：
+   Chooser 里循环动画和过渡动画放进了同一组候选，
+   而 MM 总判循环动画代价更低（6.8 节）。这可能是对的行为，先确认是不是 bug
+```
+
+## 9.4 调试手段
 
 **① 状态机调试可视化。** GASP 的调试 Widget 里有开关，打开后能直接在屏幕上看到 `MovementDirection` 的四个象限边界随条件变化——这是验证 2.2 节那套迟滞逻辑唯一靠谱的方式。注释里两次提到它（"you can see the quadrants change if you enable state machine debugging in the widget"）。
 
 **② Chooser 表的行内 `Disabled` 开关。** 怀疑某一行抢了优先级，直接勾上 `Disabled`，不用删行也不用改条件。
 
-**③ 把 `SearchCost` 打到屏幕上。** 它是 `SetBlendStackAnimFromChooser` 里唯一被存下来的 MM 中间量，用来定 `MMCostLimit` 的量级。
+**③ 转换上的 `Disabled` 开关。** 注意它跟 Chooser 的不一样：**编译时就把这条转换丢掉**，不是运行时跳过。用来二分定位"到底是哪条转换在抢"。
 
-**④ Rewind Debugger**（`Window → Rewind Debugger`）。可以逐帧回看状态机的状态、Blend Stack 的活动混合层、Pose Search 的搜索结果。方案 B 这种"决策分散在多个回调里"的结构，靠它比靠 Print String 高效得多。
+**④ 把 `SearchCost` 打到屏幕上。** 它是 `SetBlendStackAnimFromChooser` 里唯一被存下来的 MM 中间量，用来定 `MMCostLimit` 的量级。
+
+**⑤ 用 Transition Start 通知看时序。** 给每条转换填上带前缀的 Start 通知（6.11 节），在 Rewind Debugger 的时间轴上就能直接看到"逻辑状态什么时候切的"和"Blend Stack 什么时候起混合的"，两条时间线对比着看，`ForceBlend` 有没有生效一目了然。
+
+**⑥ Rewind Debugger**（`Window → Rewind Debugger`）。可以逐帧回看状态机的状态、Blend Stack 的活动混合层、Pose Search 的搜索结果。方案 B 这种"决策分散在多个回调里"的结构，靠它比靠 Print String 高效得多。
 
 ---
 
@@ -1315,7 +1685,8 @@ static void AddChooserStructInputOutput(FChooserEvaluationContext& Context, int3
 ✅ 可单独抄：Chooser 分层表 + 输出结构体（4.x）—— 与 MM 无关，纯粹好用
 ✅ 可单独抄：MovementDirection 的象限迟滞（2.2）—— 手感立竿见影
 ✅ 可单独抄：Steering Target Rotation 换资产量（2.3）—— 设计思路层面的收益最大
-✅ 可单独抄：曲线烤元数据（5.4）+ RInterpTo 检突变（6.3）
+✅ 可单独抄：曲线烤元数据（5.4）+ RInterpTo 检突变（6.4）
+✅ 可单独抄：自转换 + NoValidAnim 组成的"每帧重试"机制（6.9）
 ⚠️ 谨慎：整套"状态机不出姿态 + 外部 Blend Stack"的骨架
 ```
 
@@ -1355,6 +1726,11 @@ Engine/Plugins/Animation/PoseSearch/Source/Runtime/Public/PoseSearch/
     PoseSearchAnimNotifies.h
 Engine/Plugins/Chooser/Source/Chooser/Public/
     ChooserFunctionLibrary.h
+
+# 第六部分那些转换配置项的出处
+Engine/Source/Editor/AnimGraph/Public/AnimStateTransitionNode.h     ← 各字段的 tooltip
+Engine/Source/Runtime/Engine/Classes/Animation/AnimStateMachineTypes.h  ← 烘焙后的结构
+Engine/Source/Runtime/Engine/Private/Animation/AnimNode_StateMachine.cpp ← 运行时行为
 ```
 
 **本系列**
