@@ -20,19 +20,21 @@ tags:
 模型已经能写对绝大多数代码。真正卡住的是——它不知道这个项目的结构、不知道历史踩过的坑、不知道什么算“验证过了”。这三件事必须由人供给，供给方式决定了产出质量，而不是提示词技巧。
 
 <div style="position:relative;width:100%;aspect-ratio:16/9;margin:2rem 0;border:1px solid #d8d8d8;border-radius:4px;overflow:hidden;background:#0b0f17">
-  <iframe src="{{ site.baseurl }}/slides/ai-systematic-engineering.html"
+  <iframe src="{{ site.baseurl }}/slides/ai-systematic-engineering.html?v=20260911b"
           style="position:absolute;inset:0;width:100%;height:100%;border:0"
           allowfullscreen
           title="用 AI 构建系统性工程 · 幻灯片"></iframe>
 </div>
 
 <p style="text-align:center;margin-top:-1rem">
-  <a href="{{ site.baseurl }}/slides/ai-systematic-engineering.html" target="_blank" rel="noopener">
+  <a href="{{ site.baseurl }}/slides/ai-systematic-engineering.html?v=20260911b" target="_blank" rel="noopener">
     ↗ 在新标签页全屏打开
   </a>
 </p>
 
-**操作方式**：`←` `→` 或空格翻页 · `O` 打开概览网格 · `F` 全屏 · 支持滚轮和触屏滑动。在上面的嵌入窗口里，键盘需要先点一下画面才能生效。
+**操作方式**：`←` `→` `↑` `↓` 或空格翻页 · `ESC` 打开概览网格 · `Home` / `End` 跳首尾 · `F` 全屏 · `Ctrl+P` 导 PDF。在上面的嵌入窗口里，键盘需要先点一下画面才能生效。
+
+**语言**：页面顶部切到 English / 日本語 后，幻灯片（含新标签页全屏）会跟着一起翻译；代码块、C++ 标识符和文件名不参与翻译。
 
 ---
 
