@@ -1,1969 +1,988 @@
-<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>用 AI 构建系统性工程 · MetaProject 团队内部技术分享</title>
-    <style>
-      /* ========== TOKENS ========== */
-      :root {
-        --bg: #0b0f17;
-        --bg-2: #121826;
-        --bg-3: #182031;
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
-        --fg: #e8edf5;
-        --fg-2: rgba(232, 237, 245, 0.62);
-        --fg-3: rgba(232, 237, 245, 0.34);
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>用 AI 构建系统性工程 · MetaProject 团队分享</title>
+<style>
+/* ============ 基础 ============ */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0b0f17;
+  --bg2:#111827;
+  --fg:#e6edf3;
+  --dim:#8b98a9;
+  --dim2:#5d6b7d;
+  --line:#1f2937;
+  --acc:#f5a524;      /* 琥珀：强调 */
+  --acc2:#2dd4bf;     /* 青：正例 */
+  --bad:#f87171;      /* 红：反例 */
+  --good:#4ade80;
+  --purple:#a78bfa;
+  --code:#0d1420;
+}
+html,body{height:100%;background:var(--bg);overflow:hidden}
+body{
+  font-family:"Segoe UI",-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Hiragino Sans GB",sans-serif;
+  color:var(--fg);
+  -webkit-font-smoothing:antialiased;
+}
+code,pre,.mono{font-family:"Cascadia Code","JetBrains Mono",Consolas,"SF Mono",Menlo,monospace}
 
-        --amber: #f5a524;
-        --amber-dim: rgba(245, 165, 36, 0.16);
+/* ============ 舞台 ============ */
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#deck{
+  width:1280px;height:720px;position:relative;
+  transform-origin:center center;
+}
+.slide{
+  position:absolute;inset:0;
+  padding:66px 86px 78px;
+  display:none;
+  flex-direction:column;
+  background:
+    radial-gradient(1200px 600px at 85% -10%, rgba(245,165,36,.07), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(45,212,191,.06), transparent 60%),
+    var(--bg);
+  overflow:hidden;
+}
+.slide.active{display:flex}
 
-        --line: rgba(232, 237, 245, 0.1);
-        --line-2: rgba(232, 237, 245, 0.18);
+/* ============ 通用排版 ============ */
+.kicker{
+  font-size:15px;letter-spacing:.22em;text-transform:uppercase;
+  color:var(--acc);font-weight:700;margin-bottom:18px;
+  display:flex;align-items:center;gap:12px;
+}
+.kicker::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(245,165,36,.5),transparent)}
+h1{font-size:64px;line-height:1.18;font-weight:800;letter-spacing:-.02em}
+h2{font-size:44px;line-height:1.25;font-weight:750;letter-spacing:-.01em;margin-bottom:30px}
+h3{font-size:27px;font-weight:700;margin-bottom:14px;color:var(--fg)}
+p{font-size:23px;line-height:1.72;color:#cbd5e1}
+.lead{font-size:27px;line-height:1.65;color:#dbe4ee}
+.dim{color:var(--dim)}
+.acc{color:var(--acc)}
+.acc2{color:var(--acc2)}
+.badc{color:var(--bad)}
+.goodc{color:var(--good)}
+b,strong{color:#fff;font-weight:700}
+.mark{background:linear-gradient(transparent 62%,rgba(245,165,36,.28) 62%);padding:0 2px}
+.note{font-size:16px;color:var(--dim2);margin-top:auto;padding-top:22px}
 
-        --f-sans: "Microsoft YaHei", "微软雅黑", -apple-system, "Segoe UI",
-          sans-serif;
-        --f-mono: "Cascadia Mono", Consolas, "Microsoft YaHei", "微软雅黑",
-          monospace;
+ul{list-style:none}
+ul li{
+  font-size:24px;line-height:1.62;color:#cbd5e1;
+  padding-left:34px;position:relative;margin-bottom:20px;
+}
+ul li::before{
+  content:"";position:absolute;left:6px;top:14px;
+  width:9px;height:9px;border-radius:2px;background:var(--acc);transform:rotate(45deg);
+}
+ul.tight li{margin-bottom:12px;font-size:22px}
+ol{counter-reset:n;list-style:none}
+ol li{
+  font-size:24px;line-height:1.6;color:#cbd5e1;
+  padding-left:52px;position:relative;margin-bottom:22px;counter-increment:n;
+}
+ol li::before{
+  content:counter(n);position:absolute;left:0;top:2px;
+  width:34px;height:34px;border-radius:9px;
+  background:rgba(245,165,36,.13);border:1px solid rgba(245,165,36,.35);
+  color:var(--acc);font-size:17px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+}
 
-        --sz-display: 92px;
-        --sz-h1: 64px;
-        --sz-h2: 44px;
-        --sz-h3: 26px;
-        --sz-lead: 20px;
-        --sz-body: 16px;
-        --sz-cap: 13px;
-        --sz-label: 12px;
+/* ============ 封面 / 分隔页 ============ */
+.s-title{justify-content:center;align-items:flex-start}
+.s-title h1{font-size:80px;margin:26px 0 30px}
+.s-title .sub{font-size:28px;color:var(--dim);line-height:1.6}
+.s-title .meta{margin-top:52px;font-size:17px;color:var(--dim2);letter-spacing:.06em}
+.s-section{justify-content:center;align-items:flex-start}
+.s-section .num{
+  font-size:150px;font-weight:800;line-height:1;
+  background:linear-gradient(135deg,var(--acc),#ff7a45);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  opacity:.95;
+}
+.s-section h1{font-size:60px;margin-top:12px}
+.s-section .sub{font-size:25px;color:var(--dim);margin-top:20px;max-width:840px;line-height:1.6}
 
-        --pad-x: 84px;
-        --pad-y: 56px;
-      }
+/* ============ 卡片 / 栅格 ============ */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:26px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.card{
+  background:linear-gradient(180deg,rgba(255,255,255,.045),rgba(255,255,255,.015));
+  border:1px solid var(--line);border-radius:16px;padding:26px 28px;
+}
+.card h3{font-size:23px;margin-bottom:12px}
+.card p,.card li{font-size:19px;line-height:1.62}
+.card ul li{padding-left:24px;margin-bottom:10px}
+.card ul li::before{left:2px;top:11px;width:7px;height:7px}
+.card.bad{border-color:rgba(248,113,113,.4);background:linear-gradient(180deg,rgba(248,113,113,.09),rgba(248,113,113,.02))}
+.card.good{border-color:rgba(74,222,128,.4);background:linear-gradient(180deg,rgba(74,222,128,.09),rgba(74,222,128,.02))}
+.card.acc{border-color:rgba(245,165,36,.4);background:linear-gradient(180deg,rgba(245,165,36,.09),rgba(245,165,36,.02))}
+.tag{
+  display:inline-block;font-size:14px;font-weight:700;letter-spacing:.1em;
+  padding:5px 11px;border-radius:7px;margin-bottom:14px;
+}
+.tag.bad{background:rgba(248,113,113,.16);color:var(--bad)}
+.tag.good{background:rgba(74,222,128,.16);color:var(--good)}
+.tag.acc{background:rgba(245,165,36,.16);color:var(--acc)}
+.tag.neu{background:rgba(139,152,169,.16);color:var(--dim)}
 
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-      html,
-      body {
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-        background: #05070c;
-        font-family: var(--f-sans);
-        -webkit-font-smoothing: antialiased;
-      }
+/* ============ 数字 ============ */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin:14px 0 30px}
+.stat{text-align:left;border-left:3px solid var(--acc);padding-left:20px}
+.stat .n{font-size:54px;font-weight:800;line-height:1.05;letter-spacing:-.02em}
+.stat .l{font-size:17px;color:var(--dim);margin-top:8px}
 
-      /* ========== STAGE ========== */
-      /* 固定 1280x720 舞台，整体等比缩放 —— 投屏时不会因分辨率不同而重排 */
-      #viewport {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      #stage {
-        width: 1280px;
-        height: 720px;
-        position: relative;
-        transform-origin: center center;
-        background: var(--bg);
-        overflow: hidden;
-      }
+/* ============ 代码 ============ */
+pre{
+  background:var(--code);border:1px solid var(--line);border-left:3px solid var(--acc);
+  border-radius:12px;padding:22px 26px;overflow:hidden;
+  font-size:18px;line-height:1.68;color:#cdd9e5;white-space:pre;
+}
+pre.sm{font-size:16px;line-height:1.6;padding:18px 22px}
+pre.xs{font-size:14.5px;line-height:1.58;padding:16px 20px}
+pre.bad{border-left-color:var(--bad)}
+pre.good{border-left-color:var(--good)}
+.c{color:#6b7f95}            /* 注释 */
+.k{color:#ff7b72}            /* 关键字 */
+.t{color:#79c0ff}            /* 类型 */
+.f{color:#d2a8ff}            /* 函数 */
+.s{color:#a5d6ff}            /* 字符串 */
+.hl{color:var(--acc);font-weight:700}
+.err{color:var(--bad);font-weight:700}
 
-      .slide {
-        position: absolute;
-        inset: 0;
-        padding: var(--pad-y) var(--pad-x);
-        display: none;
-        flex-direction: column;
-        color: var(--fg);
-        font-size: var(--sz-body);
-      }
-      .slide.on {
-        display: flex;
-      }
+/* ============ 引用 ============ */
+.quote{
+  border-left:4px solid var(--acc2);padding:6px 0 6px 28px;
+  font-size:30px;line-height:1.6;color:#e8f2f1;font-weight:600;
+}
+.quote.small{font-size:24px}
+.quote .who{display:block;font-size:16px;color:var(--dim2);font-weight:500;margin-top:14px;letter-spacing:.05em}
 
-      /* 右下角琥珀辉光 —— 整份唯一的氛围元素 */
-      .slide::after {
-        content: "";
-        position: absolute;
-        right: -8%;
-        bottom: -14%;
-        width: 46%;
-        height: 60%;
-        background: radial-gradient(
-          ellipse at 70% 75%,
-          rgba(245, 165, 36, 0.08) 0%,
-          rgba(245, 165, 36, 0.03) 42%,
-          transparent 70%
-        );
-        pointer-events: none;
-      }
-      .slide > * {
-        position: relative;
-        z-index: 1;
-      }
+/* ============ 表格 ============ */
+table{width:100%;border-collapse:collapse;font-size:19px}
+th{
+  text-align:left;font-size:15px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--acc);font-weight:700;padding:0 16px 12px;border-bottom:1px solid var(--line);
+}
+td{padding:15px 16px;border-bottom:1px solid rgba(31,41,55,.75);color:#cbd5e1;line-height:1.5;vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.k1{color:#fff;font-weight:650;white-space:nowrap}
+table.sm{font-size:17px}
+table.sm td{padding:11px 14px}
 
-      /* ========== TYPE ========== */
-      .display {
-        font-size: var(--sz-display);
-        font-weight: 700;
-        line-height: 1.14;
-        letter-spacing: -0.01em;
-      }
-      .h1 {
-        font-size: var(--sz-h1);
-        font-weight: 700;
-        line-height: 1.2;
-      }
-      .h2 {
-        font-size: var(--sz-h2);
-        font-weight: 700;
-        line-height: 1.3;
-      }
-      .h3 {
-        font-size: var(--sz-h3);
-        font-weight: 700;
-        line-height: 1.45;
-      }
-      .lead {
-        font-size: var(--sz-lead);
-        line-height: 1.75;
-        color: var(--fg-2);
-      }
-      .body {
-        font-size: var(--sz-body);
-        line-height: 1.8;
-        color: var(--fg-2);
-      }
-      .cap {
-        font-size: var(--sz-cap);
-        line-height: 1.7;
-        color: var(--fg-3);
-      }
-      .amber {
-        color: var(--amber);
-      }
-      .strong {
-        color: var(--fg);
-      }
+/* ============ 流程链 ============ */
+.flow{display:flex;flex-direction:column;gap:0}
+.flow .step{
+  background:rgba(255,255,255,.035);border:1px solid var(--line);
+  border-radius:12px;padding:16px 22px;font-size:19px;line-height:1.55;color:#cbd5e1;
+}
+.flow .step b{color:#fff}
+.flow .arr{color:var(--acc);font-size:20px;text-align:center;padding:7px 0;font-weight:800}
+.flow .step.end{border-color:rgba(248,113,113,.45);background:rgba(248,113,113,.08)}
+.flow .step.fix{border-color:rgba(74,222,128,.45);background:rgba(74,222,128,.08)}
 
-      /* 琥珀色 mono 眉标 */
-      .kicker {
-        font-family: var(--f-mono);
-        font-size: var(--sz-label);
-        letter-spacing: 0.14em;
-        color: var(--amber);
-      }
-      .rule {
-        width: 40px;
-        height: 2px;
-        background: var(--amber);
-      }
+/* ============ 时间线（时序） ============ */
+.rail{display:grid;grid-template-columns:150px 1fr;gap:0 22px;align-items:start}
+.rail .who{font-size:18px;color:var(--dim);text-align:right;padding-top:15px;font-weight:650}
+.rail .bar{
+  border-radius:10px;padding:13px 20px;font-size:18px;margin-bottom:14px;
+  border:1px solid var(--line);background:rgba(255,255,255,.04);
+}
+.rail .bar.a{border-color:rgba(121,192,255,.45);background:rgba(121,192,255,.1)}
+.rail .bar.b{border-color:rgba(167,139,250,.45);background:rgba(167,139,250,.1)}
+.rail .bar.x{border-color:rgba(248,113,113,.5);background:rgba(248,113,113,.1);color:#fecaca}
 
-      /* ========== CHROME ========== */
-      .chrome,
-      .foot {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-family: var(--f-mono);
-        font-size: var(--sz-label);
-        letter-spacing: 0.08em;
-        color: var(--fg-3);
-        flex-shrink: 0;
-      }
-      .chrome {
-        padding-bottom: 14px;
-        border-bottom: 1px solid var(--line);
-        margin-bottom: 34px;
-      }
-      .foot {
-        padding-top: 14px;
-        border-top: 1px solid var(--line);
-        margin-top: auto;
-      }
-      .main {
-        flex: 1;
-        min-height: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-      }
+/* ============ HUD ============ */
+#bar{position:fixed;left:0;bottom:0;height:3px;background:var(--acc);transition:width .28s ease;z-index:50}
+#hud{
+  position:fixed;right:26px;bottom:18px;font-size:14px;color:var(--dim2);
+  letter-spacing:.1em;z-index:50;font-family:"Cascadia Code",Consolas,monospace;
+}
+#help{
+  position:fixed;left:26px;bottom:16px;font-size:13px;color:#37414e;z-index:50;letter-spacing:.05em;
+}
 
-      /* ========== LAYOUTS ========== */
-      .cols {
-        display: grid;
-        gap: 56px;
-        align-items: start;
-      }
-      .c-1-1 {
-        grid-template-columns: 1fr 1fr;
-      }
-      .c-7-5 {
-        grid-template-columns: 7fr 5fr;
-      }
-      .c-5-7 {
-        grid-template-columns: 5fr 7fr;
-      }
-      .c-4-8 {
-        grid-template-columns: 4fr 8fr;
-      }
-      .stack {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-      .stack.sm {
-        gap: 12px;
-      }
-      .stack.lg {
-        gap: 32px;
-      }
+/* ============ 概览 ============ */
+body.ov #stage{align-items:flex-start;justify-content:flex-start;overflow:auto;padding:26px}
+body.ov #deck{width:auto;height:auto;transform:none!important;display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+body.ov .slide{
+  display:flex!important;position:relative;inset:auto;
+  width:1280px;height:720px;transform:scale(.222);transform-origin:top left;
+  border:1px solid var(--line);border-radius:10px;cursor:pointer;
+}
+body.ov .slide.active{border-color:var(--acc);box-shadow:0 0 0 2px rgba(245,165,36,.4)}
+body.ov .ovcell{width:284px;height:160px;overflow:hidden;position:relative}
 
-      /* 封面 / 尾页 */
-      .cover {
-        justify-content: center;
-        gap: 28px;
-      }
+/* ============ 翻译挂件抑制 ============ */
+/* 挂件顶栏会把固定舞台整体推下去，演示页不能被推 */
+#google_translate_element,
+.goog-te-banner-frame,
+.goog-te-gadget-icon,
+iframe.skiptranslate,
+.goog-tooltip,
+.goog-tooltip:hover{display:none!important}
+body{top:0!important}
+.goog-text-highlight{background:none!important;box-shadow:none!important}
+/* 译文比中文占更多横向空间，整体缩一档，避免撑破 1280×720 */
+html.translated-ltr .slide,
+html.translated-rtl .slide{zoom:.9}
 
-      /* 章节页 */
-      .chapter-num {
-        font-family: var(--f-mono);
-        font-size: 140px;
-        font-weight: 700;
-        line-height: 1;
-        color: var(--fg-3);
-        letter-spacing: -0.02em;
-      }
+/* ============ 打印 / 导 PDF ============ */
+@page{size:1280px 720px;margin:0}
+@media print{
+  html,body{overflow:visible;height:auto;background:#fff}
+  #stage{position:static;display:block}
+  #deck{width:1280px;height:auto;transform:none!important}
+  .slide{display:flex!important;position:relative;inset:auto;width:1280px;height:720px;page-break-after:always;break-after:page}
+  #bar,#hud,#help{display:none}
+}
+</style>
+</head>
+<body>
+<div id="stage"><div id="deck">
 
-      /* 列表 */
-      .bullets {
-        list-style: none;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-      }
-      .bullets li {
-        display: grid;
-        grid-template-columns: 22px 1fr;
-        font-size: var(--sz-lead);
-        line-height: 1.7;
-        color: var(--fg-2);
-      }
-      .bullets li::before {
-        content: "—";
-        color: var(--amber);
-        font-family: var(--f-mono);
-      }
-      .bullets.sm li {
-        font-size: var(--sz-body);
-        line-height: 1.75;
-        gap: 0;
-      }
+<!-- ========== 1 封面 ========== -->
+<section class="slide s-title">
+  <div class="kicker">MetaProject · 团队内部技术分享</div>
+  <h1>用 AI 构建<br><span class="acc">系统性工程</span></h1>
+  <div class="sub">不是"怎么让 AI 写得更多"<br>而是"怎么把工程的隐性约束，变成 AI 能消费的显性输入"</div>
+  <div class="meta">基于真实开发记录 · 2026.09 · v0.1</div>
+</section>
 
-      /* 数字 */
-      .stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-      }
-      .stat {
-        padding: 0 34px;
-        border-right: 1px solid var(--line);
-      }
-      .stat:first-child {
-        padding-left: 0;
-      }
-      .stat:last-child {
-        border-right: none;
-        padding-right: 0;
-      }
-      .stat-val {
-        font-size: 68px;
-        font-weight: 700;
-        line-height: 1.1;
-        letter-spacing: -0.01em;
-        margin-bottom: 14px;
-      }
-      .stat-val em {
-        font-style: normal;
-        color: var(--amber);
-      }
-      .stat-label {
-        font-size: var(--sz-body);
-        line-height: 1.7;
-        color: var(--fg-2);
-      }
+<!-- ========== 2 规模 ========== -->
+<section class="slide">
+  <div class="kicker">先说清楚我们在谈什么体量</div>
+  <h2>这不是"帮我写个函数"</h2>
+  <div class="stats">
+    <div class="stat"><div class="n">11</div><div class="l">代码模块</div></div>
+    <div class="stat"><div class="n">426</div><div class="l">个 .h / .cpp</div></div>
+    <div class="stat"><div class="n acc">38,479</div><div class="l">行 C++</div></div>
+    <div class="stat"><div class="n">5,396</div><div class="l">行设计文档</div></div>
+  </div>
+  <p>UE 5.8 · GAS · 网络多人 · 11 个模块（Core / AI / Inventory / Ability / Mission / Motion / Spawn / UI / Online / Developer）</p>
+  <p style="margin-top:20px">在这个体量下，<b>"提示词写得好"几乎不产生边际收益。</b></p>
+  <div class="note">数据来源：<span class="mono">Get-ChildItem Source -Recurse -Include *.h,*.cpp | Get-Content | Measure-Object -Line</span></div>
+</section>
 
-      /* 引用 */
-      .quote-mark {
-        font-family: var(--f-mono);
-        font-size: 96px;
-        line-height: 0.7;
-        color: var(--amber);
-        margin-bottom: 26px;
-      }
-      .quote-text {
-        font-size: 46px;
-        font-weight: 700;
-        line-height: 1.42;
-        max-width: 880px;
-        margin-bottom: 38px;
-      }
+<!-- ========== 3 核心命题 ========== -->
+<section class="slide" style="justify-content:center">
+  <div class="kicker">核心命题</div>
+  <h1 style="font-size:54px;line-height:1.35">AI 写代码的瓶颈<br>从来不是<span class="dim">生成能力</span>，<br>而是 <span class="acc">约束供给</span>。</h1>
+  <p class="lead" style="margin-top:40px;max-width:960px">
+    一个没有约束的 AI 会写出 <b>语法正确、编译通过、看起来非常专业、但在你的系统里是错的</b> 代码。<br>
+    而且它错得很自信 —— 因为它确实按照"通用最佳实践"写的，<span class="mark">只是你的系统不通用。</span>
+  </p>
+</section>
 
-      /* 对比 */
-      .compare {
-        display: grid;
-        grid-template-columns: 1fr 1px 1fr;
-        gap: 0;
-        align-items: start;
-      }
-      .panel {
-        padding: 0 44px;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-      }
-      .panel:first-child {
-        padding-left: 0;
-      }
-      .panel:last-child {
-        padding-right: 0;
-      }
-      .divider {
-        background: var(--line);
-        align-self: stretch;
-      }
-      .tag {
-        font-family: var(--f-mono);
-        font-size: var(--sz-label);
-        letter-spacing: 0.12em;
-        color: var(--fg-3);
-      }
-      .tag.hit {
-        color: var(--amber);
-      }
+<!-- ========== 4 目录 ========== -->
+<section class="slide">
+  <div class="kicker">今天讲什么</div>
+  <h2>三层约束 + 两块实战</h2>
+  <div class="grid3" style="margin-bottom:26px">
+    <div class="card acc"><div class="tag acc">01 结构</div><h3>让代码库自己会说话</h3><p class="dim">一致性 = AI 的模式推断准确率</p></div>
+    <div class="card acc"><div class="tag acc">02 知识</div><h3>注释是长期记忆</h3><p class="dim">传递训练数据里没有的"本系统特殊性"</p></div>
+    <div class="card acc"><div class="tag acc">03 验证</div><h3>没跑起来不算完成</h3><p class="dim">提供 AI 拿不到的运行时事实</p></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><div class="tag neu">实战 A</div><h3>分歧怎么解决</h3><p class="dim">一次完整 bug 复盘：从一句话现象到改设计</p></div>
+    <div class="card"><div class="tag neu">实战 B</div><h3>沟通范式</h3><p class="dim">反过来看 —— 人这边什么样的表达信息密度最高</p></div>
+  </div>
+</section>
 
-      /* 代码 */
-      .code {
-        font-family: var(--f-mono);
-        font-size: 14px;
-        line-height: 1.85;
-        color: rgba(232, 237, 245, 0.86);
-        background: var(--bg-2);
-        border: 1px solid var(--line);
-        border-radius: 4px;
-        padding: 20px 24px;
-        white-space: pre-wrap;
-        overflow: hidden;
-      }
-      .code.sm {
-        font-size: 13px;
-        line-height: 1.8;
-      }
-      .code.flag {
-        border-left: 2px solid var(--amber);
-      }
-      .code .c {
-        color: var(--fg-3);
-      }
-      .code .t {
-        color: #9ecbff;
-      }
-      .code .k {
-        color: #c9a0ff;
-      }
-      .code .s {
-        color: #8ddb8d;
-      }
-      .code .hl {
-        color: var(--amber);
-      }
-      .code .err {
-        color: #ff7b72;
-      }
+<!-- ========== 5 SECTION 1 ========== -->
+<section class="slide s-section">
+  <div class="num">01</div>
+  <h1>结构约束</h1>
+  <div class="sub">让代码库自己会说话</div>
+</section>
 
-      /* 表格 */
-      table.t {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
-      }
-      table.t th {
-        font-family: var(--f-mono);
-        font-size: var(--sz-label);
-        font-weight: 400;
-        letter-spacing: 0.08em;
-        color: var(--fg-3);
-        padding: 0 20px 10px 0;
-        border-bottom: 1px solid var(--line-2);
-        white-space: nowrap;
-      }
-      table.t td {
-        font-size: 15px;
-        line-height: 1.7;
-        color: var(--fg-2);
-        padding: 11px 20px 11px 0;
-        border-bottom: 1px solid var(--line);
-        vertical-align: top;
-      }
-      table.t tr:last-child td {
-        border-bottom: none;
-      }
-      table.t td.key {
-        color: var(--fg);
-        white-space: nowrap;
-      }
-      table.t td.hit,
-      table.t td.key.hit {
-        color: var(--amber);
-      }
+<!-- ========== 6 AI 怎么读代码 ========== -->
+<section class="slide">
+  <div class="kicker">为什么结构对 AI 比对人更重要</div>
+  <h2>AI 读代码库的方式跟你不一样</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="tag neu">人</div>
+      <ul class="tight">
+        <li>先看 README</li>
+        <li>再看架构图</li>
+        <li>挑一个入口顺着读</li>
+      </ul>
+      <p class="dim" style="margin-top:16px">—— 自顶向下，有全局</p>
+    </div>
+    <div class="card acc">
+      <div class="tag acc">AI</div>
+      <ul class="tight">
+        <li>grep 一个符号</li>
+        <li>读几个文件</li>
+        <li>基于<b>局部样本</b>推断全局模式</li>
+      </ul>
+      <p class="acc" style="margin-top:16px">—— 检索驱动，靠推断</p>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:34px">
+    所以：<span class="mark"><b>你的代码库有多一致，AI 推断出的模式就有多准。</b></span>
+  </p>
+</section>
 
-      /* 因果链 */
-      .chain {
-        display: flex;
-        flex-direction: column;
-      }
-      .chain .node {
-        border-left: 2px solid var(--line-2);
-        padding: 11px 0 11px 24px;
-        font-size: 16px;
-        line-height: 1.7;
-        color: var(--fg-2);
-      }
-      .chain .node.last {
-        border-left-color: var(--amber);
-        color: var(--fg);
-      }
+<!-- ========== 7 目录约定 ========== -->
+<section class="slide">
+  <div class="kicker">我们的约定</div>
+  <h2>目录镜像 · 统一前缀 · 职责域切分</h2>
+  <pre class="sm">Source/BioExtraction<span class="hl">&lt;模块&gt;</span>/
+├── Public/<span class="hl">&lt;职责域&gt;</span>/<span class="t">BE</span>&lt;类名&gt;.h
+├── Private/<span class="hl">&lt;职责域&gt;</span>/<span class="t">BE</span>&lt;类名&gt;.cpp   <span class="c">← 目录结构镜像 Public</span>
+└── BioExtraction&lt;模块&gt;.Build.cs
 
-      /* 卡片 */
-      .card {
-        background: var(--bg-2);
-        border: 1px solid var(--line);
-        border-left: 2px solid var(--amber);
-        border-radius: 4px;
-        padding: 20px 24px;
-      }
-      .card-h {
-        font-size: 18px;
-        font-weight: 700;
-        line-height: 1.55;
-        color: var(--fg);
-        margin-bottom: 8px;
-      }
-      .card-b {
-        font-size: 15px;
-        line-height: 1.75;
-        color: var(--fg-2);
-      }
+<span class="c">// 跨模块复用同一套一级职责域目录：</span>
+Abilities / Animation / Catalog / <span class="hl">Components</span> / Debug / <span class="hl">Definitions</span>
+Effects / <span class="hl">Feedback</span> / <span class="hl">Instance</span> / Interaction / Loadout / Pickups / Weapons</pre>
+  <div class="grid2" style="margin-top:28px">
+    <div class="card"><h3>对人的收益</h3><p class="dim">"整齐"、可读</p></div>
+    <div class="card acc"><h3>对 AI 的收益</h3><p>极大<b>降低上下文熵</b> —— 结构本身编码了答案</p></div>
+  </div>
+</section>
 
-      .note {
-        font-family: var(--f-mono);
-        font-size: var(--sz-cap);
-        line-height: 1.75;
-        color: var(--fg-3);
-        border-top: 1px solid var(--line);
-        padding-top: 12px;
-      }
+<!-- ========== 8 结构复利 ========== -->
+<section class="slide">
+  <div class="kicker">结构一致性的直接回报</div>
+  <h2>"给武器定义加个 Unequip 蒙太奇配置"</h2>
+  <div class="grid2">
+    <div class="card good">
+      <div class="tag good">结构一致时</div>
+      <p>AI 不需要问"配置放哪儿"。<br><span class="mono" style="font-size:17px;color:#a5d6ff">Definitions/BEWeaponDefinition.h</span> 里已经有 <span class="mono acc" style="font-size:17px">CharacterEquipMontage</span>，新字段就紧挨着放。</p>
+      <p style="margin-top:14px"><b>一次找对。</b></p>
+    </div>
+    <div class="card bad">
+      <div class="tag bad">结构混乱时</div>
+      <p>同样的配置在这个模块叫 <span class="mono">Config</span>、那个模块叫 <span class="mono">Settings</span>、还有一个硬编码在 <span class="mono">.cpp</span> 里。</p>
+      <p style="margin-top:14px"><b>AI 每次都要重新猜，而且每次猜的结果可能不一样。</b><br><span class="dim">这就是 context drift。</span></p>
+    </div>
+  </div>
+  <div class="note">推论：结构约定的价值在 AI 协作下被放大了一个量级。</div>
+</section>
 
-      /* ========== HUD ========== */
-      #bar {
-        position: absolute;
-        left: 0;
-        bottom: 0;
-        height: 2px;
-        background: var(--amber);
-        z-index: 30;
-        transition: width 0.25s ease;
-      }
-      #pager {
-        position: absolute;
-        right: 18px;
-        bottom: 14px;
-        font-family: var(--f-mono);
-        font-size: 12px;
-        color: var(--fg-3);
-        z-index: 30;
-      }
-      #help {
-        position: fixed;
-        left: 16px;
-        bottom: 12px;
-        font-family: var(--f-mono);
-        font-size: 11px;
-        color: rgba(232, 237, 245, 0.25);
-        z-index: 40;
-      }
-
-      /* 概览 */
-      #grid {
-        position: fixed;
-        inset: 0;
-        background: #05070c;
-        z-index: 50;
-        display: none;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 10px;
-        padding: 24px;
-        overflow-y: auto;
-        align-content: start;
-      }
-      #grid.on {
-        display: grid;
-      }
-      .thumb {
-        aspect-ratio: 16/9;
-        background: var(--bg-2);
-        border: 1px solid var(--line);
-        border-radius: 3px;
-        cursor: pointer;
-        padding: 8px;
-        overflow: hidden;
-        font-size: 9px;
-        line-height: 1.4;
-        color: var(--fg-2);
-      }
-      .thumb:hover {
-        border-color: var(--amber);
-      }
-      .thumb b {
-        display: block;
-        font-family: var(--f-mono);
-        font-size: 9px;
-        color: var(--amber);
-        margin-bottom: 4px;
-      }
-
-      @media print {
-        @page {
-          size: 1280px 720px;
-          margin: 0;
-        }
-        html,
-        body {
-          overflow: visible;
-          height: auto;
-        }
-        #viewport {
-          position: static;
-          display: block;
-        }
-        #stage {
-          transform: none !important;
-        }
-        .slide {
-          position: relative;
-          display: flex !important;
-          width: 1280px;
-          height: 720px;
-          page-break-after: always;
-        }
-        #bar,
-        #help,
-        #grid,
-        #pager {
-          display: none !important;
-        }
-      }
-    </style>
-  </head>
-  <body>
-    <div id="viewport">
-      <div id="stage">
-        <!-- 01 封面 -->
-        <section class="slide cover">
-          <span class="kicker">MetaProject · 团队内部技术分享</span>
-          <h1 class="display">用 AI 构建<br />系统性工程</h1>
-          <div class="rule"></div>
-          <p class="lead" style="max-width: 660px">
-            不是「怎么让 AI 写得更快」，<br />而是「怎么让 AI 写出的东西能进主干」。
-          </p>
-          <div
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: flex-end;
-              margin-top: 26px;
-            "
-          >
-            <div class="card" style="max-width: 520px">
-              <div class="card-h">本次分享的全部材料，来自真实提交与真实对话。</div>
-              <div class="card-b">没有演示用例，没有事后美化的结论。</div>
-            </div>
-            <span class="cap" style="font-family: var(--f-mono)">
-              一个 UE5 多人射击项目 · 2026.09
-            </span>
-          </div>
-        </section>
-
-        <!-- 02 三个数 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>开场 · 一组数字</span><span>用 AI 构建系统性工程</span>
-          </div>
-          <div class="main stack lg">
-            <h2 class="h2">先看三个数，再看结论。</h2>
-            <div class="stats">
-              <div class="stat">
-                <div class="stat-val">38.5<em>k</em></div>
-                <div class="stat-label">
-                  行 C++ —— 这个项目里 AI 参与产出的代码量。
-                </div>
-              </div>
-              <div class="stat">
-                <div class="stat-val">5.4<em>k</em></div>
-                <div class="stat-label">
-                  行设计文档 —— 喂给 AI 的，也是人自己要看的约束。
-                </div>
-              </div>
-              <div class="stat">
-                <div class="stat-val">1</div>
-                <div class="stat-label">
-                  份 AI 协作规范文件 —— 全部协作规范只有这一个入口。
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 03 核心命题 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>开场 · 核心命题</span><span>用 AI 构建系统性工程</span>
-          </div>
-          <div class="main">
-            <div class="cols c-1-1" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">本次分享的全部内容都在回答这一句</span>
-                <h2 class="h1">瓶颈不是生成能力，<br />是约束供给。</h2>
-              </div>
-              <div class="stack">
-                <p class="lead">
-                  模型已经能写对绝大多数代码。真正卡住的是：它不知道这个项目的结构、不知道历史踩过的坑、不知道什么算「验证过了」。
-                </p>
-                <p class="lead">
-                  这三件事必须由人供给。供给方式决定了产出质量，而不是提示词技巧。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 04 目录 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>开场 · 路线图</span><span>用 AI 构建系统性工程</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">五个部分</span>
-                <h2 class="h2">今天讲什么。</h2>
-              </div>
-              <ul class="bullets">
-                <li><span>结构约束 —— 让 AI 能读懂这个仓库</span></li>
-                <li><span>知识约束 —— 把踩过的坑写进代码本身</span></li>
-                <li><span>验证约束 —— 什么才算「做完了」</span></li>
-                <li><span>分歧怎么解决 —— 人和 AI 判断不一致的时候</span></li>
-                <li><span>沟通范式 —— 五个能直接复用的动作</span></li>
-              </ul>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 05 章节 01 -->
-        <section class="slide cover">
-          <div class="chapter-num">01</div>
-          <div class="rule"></div>
-          <h2 class="h1">结构约束</h2>
-          <p class="lead" style="max-width: 620px">
-            AI 读代码库的方式和人不一样。结构不是给人看的审美问题，是给 AI 的检索接口。
-          </p>
-        </section>
-
-        <!-- 06 两种读法 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>01 · 结构约束</span><span>读代码库的两种方式</span>
-          </div>
-          <div class="main">
-            <div class="compare">
-              <div class="panel">
-                <span class="tag">人怎么读</span>
-                <h3 class="h3">靠记忆和习惯。</h3>
-                <p class="lead">
-                  人在一个项目待三个月，脑子里自然有一张地图。文件放哪、谁调谁、哪块能动，都不用查。
-                </p>
-                <ul class="bullets sm">
-                  <li><span>可以容忍命名不一致 —— 反正认得出来</span></li>
-                  <li><span>可以容忍职责混放 —— 反正知道历史原因</span></li>
-                </ul>
-              </div>
-              <div class="divider"></div>
-              <div class="panel">
-                <span class="tag hit">AI 怎么读</span>
-                <h3 class="h3">靠一次次检索。</h3>
-                <p class="lead">
-                  每次对话都是新的。它只能靠文件名、目录层级、符号前缀去猜「相关的东西在哪」。
-                </p>
-                <ul class="bullets sm">
-                  <li><span>命名不一致 = 检索漏掉 = 改一半</span></li>
-                  <li><span>职责混放 = 上下文吃不下 = 只看到局部</span></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 07 三条硬规则 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>01 · 结构约束</span><span>三条硬规则</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">可检索性优先于优雅</span>
-                <h2 class="h2">目录镜像<br />统一前缀<br />职责域切分</h2>
-              </div>
-              <div class="code sm">Source/BioExtractionInventory/
-  <span class="k">Public</span>/Pickups/BESpawnedPickup.h
-  <span class="k">Private</span>/Pickups/BESpawnedPickup.cpp   <span class="c">← 两边目录结构完全对称</span>
-
-<span class="c">// 统一前缀：一次 grep 圈出整个模块</span>
-<span class="t">BE</span>SpawnedPickup   <span class="t">BE</span>InventoryComponent   <span class="t">BE</span>ExtractionGameMode
-
-<span class="c">// 职责域切分：一个目录只回答一个问题</span>
-Pickups/     <span class="c">物品在世界里的表现</span>
-Inventory/   <span class="c">物品在背包里的状态</span>
-Extraction/  <span class="c">局内流程与撤离</span></div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 08 加个配置 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>01 · 结构约束</span><span>同一个需求：「加个 Unequip 配置」</span>
-          </div>
-          <div class="main">
-            <div class="compare">
-              <div class="panel">
-                <span class="tag">结构不一致时</span>
-                <h3 class="h3">它只能改到它看见的那一半。</h3>
-                <p class="lead">
-                  Equip 的蒙太奇写在组件里，Unequip 的写在动画蓝图里。AI 照着一个改，另一个留在原地。
-                </p>
-                <p class="lead">
-                  结果是能编译、能跑、行为不对 —— 最贵的一种错误。
-                </p>
-              </div>
-              <div class="divider"></div>
-              <div class="panel">
-                <span class="tag hit">结构一致时</span>
-                <h3 class="h3">对称结构自己会提示缺口。</h3>
-                <p class="lead">
-                  Equip / Unequip 两条路径同构，AI 改完一边会主动问「另一边要不要同样处理」。
-                </p>
-                <p class="lead">
-                  对称性本身就是一种可执行的规范，不需要写在文档里。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 09 配置单点化 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>01 · 结构约束</span><span>配置单点化</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">让「可调的东西」只有一个住址</span>
-                <h2 class="h2">硬编码是 AI 最容易复制的坏习惯。</h2>
-              </div>
-              <div class="stack">
-                <ul class="bullets sm">
-                  <li>
-                    <span>数值、资产路径、时长全部上移到 UPROPERTY，逻辑里只读不写死</span>
-                  </li>
-                  <li>
-                    <span>AI 会照抄它看到的模式 —— 看到硬编码就继续硬编码</span>
-                  </li>
-                </ul>
-                <div class="code sm flag"><span class="c">// 不是为了好看，是为了让下一次修改只改一个地方</span>
-<span class="t">UPROPERTY</span>(EditDefaultsOnly, Category = <span class="s">"Weapon|Montage"</span>)
-<span class="t">UAnimMontage</span>* EquipMontage;
-
-<span class="t">UPROPERTY</span>(EditDefaultsOnly, Category = <span class="s">"Weapon|Montage"</span>)
-<span class="t">UAnimMontage</span>* <span class="hl">UnequipMontage</span>;   <span class="c">← 对称位置，对称命名</span></div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 10 章节 02 -->
-        <section class="slide cover">
-          <div class="chapter-num">02</div>
-          <div class="rule"></div>
-          <h2 class="h1">知识约束</h2>
-          <p class="lead" style="max-width: 620px">
-            踩过的坑如果只存在于某个人的记忆里，对 AI 等于不存在。它必须写进代码本身。
-          </p>
-        </section>
-
-        <!-- 11 为什么型注释 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>02 · 知识约束</span><span>注释写「为什么」</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">代码说得清「做了什么」</span>
-                <h2 class="h2">注释只该回答「为什么是这样」。</h2>
-              </div>
-              <div class="stack sm">
-                <div class="code sm"><span class="c">// 反例：复述代码，对 AI 和人都是零信息</span>
-<span class="c">// 设置 bReinitPose 为 false</span>
-Mesh-&gt;SetSkeletalMesh(NewMesh, <span class="k">false</span>);</div>
-                <div class="code sm flag"><span class="c">// 正例：写下不能改的理由</span>
-<span class="c">// bReinitPose 必须为 false：换装时若重置姿势，</span>
-<span class="c">// 当前正在播放的 Montage 会被打断，表现为角色瞬间 T-Pose 一帧。</span>
-Mesh-&gt;SetSkeletalMesh(NewMesh, <span class="hl">false</span>);</div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 12 负面知识 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>02 · 知识约束</span><span>负面知识</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">最值钱的一类注释</span>
-                <h2 class="h2">「试过了，不行，原因是……」</h2>
-              </div>
-              <div class="stack sm">
-                <div class="code sm"><span class="c">// BEGA_WeaponFire.cpp:344</span>
-<span class="c">// 不要在这里用预测键（Prediction Key）走本地预测：</span>
-<span class="c">// 射击结果依赖服务端的命中判定，本地预测出的伤害数字</span>
-<span class="c">// 会在回滚时闪烁。这里刻意放弃预测，接受一个 RTT 的延迟。</span>
-<span class="k">if</span> (!HasAuthority()) { <span class="k">return</span>; }   <span class="hl">← 刻意的，不是漏写</span></div>
-                <p class="lead">
-                  没有这段注释，AI 下一次「优化手感」时会把本地预测加回来 —— 它看到的是一个可以优化的空缺，而不是一个已经做过的决定。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 13 错误注释 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>02 · 知识约束</span><span>错误注释比没有注释更贵</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">真实案例</span>
-                <h2 class="h2">这条注释在仓库里存在很久 —— 它是错的。</h2>
-              </div>
-              <div class="stack">
-                <div class="code sm"><span class="c">// 关闭移动复制，物理由客户端自己模拟</span>
-SetReplicateMovement(<span class="k">false</span>);</div>
-                <p class="lead">
-                  事实是：关掉它并不会让客户端「自己模拟」，只会让位置不再同步。物理是否模拟由
-                  <span class="amber">bRepPhysics</span> 那条分支决定，和这个开关无关。
-                </p>
-                <p class="lead">
-                  人会怀疑一条可疑注释；AI 会把它当作项目事实，并在此之上继续推理。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 14 污染链 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>02 · 知识约束</span><span>一条错注释的扩散路径</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">为什么要专门修注释</span>
-                <h2 class="h2">污染是会传导的。</h2>
-              </div>
-              <div class="stack">
-                <div class="chain">
-                  <div class="node">一条错误注释进入仓库</div>
-                  <div class="node">AI 读到它，当作项目既有事实</div>
-                  <div class="node">基于错事实写出新代码，并写下新的注释</div>
-                  <div class="node last">
-                    错误变成两处、四处 —— 而且后面几处看起来互相印证
-                  </div>
-                </div>
-                <div class="note">
-                  所以「顺手改掉一条过时注释」不是洁癖，是阻断传导。
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 15 注释三条硬要求 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>02 · 知识约束</span><span>三条硬要求</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">写进 AGENTS.md 的部分</span>
-                <h2 class="h2">注释的三条硬要求。</h2>
-              </div>
-              <div class="stack">
-                <ul class="bullets">
-                  <li><span>只写「为什么」和「为什么不」，不复述代码在做什么</span></li>
-                  <li><span>刻意的取舍必须标明是刻意的，否则会被当成缺陷「修掉」</span></li>
-                  <li><span>发现过时注释就地改掉 —— 和改代码同一个提交</span></li>
-                </ul>
-                <div class="card">
-                  <div class="card-h">
-                    注释是写给下一个读者的，而现在最频繁的读者是 AI。
-                  </div>
-                  <div class="card-b">它一天读这个文件几十次，而且每次都从零开始。</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
-
-        <!-- 16 章节 03 -->
-        <section class="slide cover">
-          <div class="chapter-num">03</div>
-          <div class="rule"></div>
-          <h2 class="h1">验证约束</h2>
-          <p class="lead" style="max-width: 620px">
-            「我改好了」是一句断言。断言需要证据，而证据的标准必须事先说清楚。
-          </p>
-        </section>
-
-        <!-- 17 需求原文 -->
-        <section class="slide cover">
-          <div class="quote-mark">"</div>
-          <div class="quote-text">
-            把武器显隐改成由动画 notify 驱动，不要再用固定延时了。
-          </div>
-          <div class="stack sm">
-            <span class="kicker">需求原文</span>
-            <span class="cap" style="font-family: var(--f-mono)">
-              ShowWeapon notify 重构 · 未做任何补充说明
-            </span>
-          </div>
-        </section>
-
-        <!-- 18 第一版实现 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>第一版实现</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">看起来完全合理</span>
-                <h2 class="h2">没在播蒙太奇，就直接显示。</h2>
-              </div>
-              <div class="stack">
-                <div class="code"><span class="c">// 收到 notify 时才挂武器；没有蒙太奇就立刻挂</span>
-<span class="k">if</span> (!AnimInstance-&gt;IsPlayingMontage())
+<!-- ========== 9 配置单点化 ========== -->
+<section class="slide">
+  <div class="kicker">第二条结构原则</div>
+  <h2>配置单点化 —— 把 AI 的盲区收敛掉</h2>
+  <pre class="sm"><span class="c">// 通用武器表现 actor：由代码从武器定义推入 body mesh / AnimBP（配置单点）。</span>
+<span class="k">if</span> (<span class="t">ABEWeaponVisual</span>* WeaponVisual = <span class="f">Cast</span>&lt;<span class="t">ABEWeaponVisual</span>&gt;(NewActor))
 {
-    AttachSlotVisual(Slot, V, bActive);   <span class="hl">← 问题在这一行</span>
-    <span class="k">return</span>;
-}</div>
-                <p class="lead">逻辑上无懈可击，编译通过，本地看起来也对。</p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+    WeaponVisual-&gt;<span class="f">InitFromDefinition</span>(<span class="f">Cast</span>&lt;<span class="t">UBEWeaponDefinition</span>&gt;(Def));
+    WeaponVisual-&gt;<span class="f">NotifyAttached</span>(bBuildActive);
+    WeaponVisual-&gt;<span class="f">ApplyAttachments</span>(Instance-&gt;<span class="f">GetAttachments</span>());
+}</pre>
+  <ul style="margin-top:30px">
+    <li>新增一种武器行为 <b>只需要改一个地方</b>，AI 不需要在 N 个蓝图之间做一致性维护</li>
+    <li><span class="badc">蓝图恰恰是 AI 读不了的盲区</span> —— 配置散在蓝图里的系统，AI 命中率断崖式下降</li>
+    <li>能放代码 / 数据资产的配置，就不要放蓝图</li>
+  </ul>
+</section>
 
-        <!-- 19 测试反馈 -->
-        <section class="slide cover">
-          <div class="quote-mark">"</div>
-          <div class="quote-text">从第一帧就挂在手上了。</div>
-          <div class="stack sm">
-            <span class="kicker">测试反馈</span>
-            <span class="cap" style="font-family: var(--f-mono)">
-              一句话 · 没有日志 · 没有复现步骤
-            </span>
-          </div>
-        </section>
+<!-- ========== 10 SECTION 2 ========== -->
+<section class="slide s-section">
+  <div class="num">02</div>
+  <h1>知识约束</h1>
+  <div class="sub">注释是人机共享的长期记忆</div>
+</section>
 
-        <!-- 20 时序真相 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>时序真相</span>
-          </div>
-          <div class="main stack">
-            <div class="cols c-4-8" style="align-items: baseline">
-              <div class="stack sm">
-                <span class="kicker">本地对，联机不对</span>
-                <h2 class="h2">判断的那一刻，<br />蒙太奇还没起来。</h2>
-              </div>
-              <div class="stack">
-                <table class="t">
-                  <tr>
-                    <th>时刻</th>
-                    <th>发生了什么</th>
-                    <th>此时的判断结果</th>
-                  </tr>
-                  <tr>
-                    <td class="key">T0</td>
-                    <td>服务端切换武器，状态开始复制</td>
-                    <td>—</td>
-                  </tr>
-                  <tr>
-                    <td class="key">T0 + ε</td>
-                    <td>客户端收到状态变更，回调触发</td>
-                    <td class="hit">IsPlayingMontage() = false</td>
-                  </tr>
-                  <tr>
-                    <td class="key">T0 + 1~2 帧</td>
-                    <td>GameplayCue 到达，蒙太奇真正开始播</td>
-                    <td>已经晚了，武器早挂上了</td>
-                  </tr>
-                </table>
-                <div class="note">
-                  本地单机时这三步在同一帧内完成，所以永远测不出来。
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 11 为什么型注释 ========== -->
+<section class="slide">
+  <div class="kicker">样本 · 全部来自本项目</div>
+  <h2>写"为什么"，不写"是什么"</h2>
+  <pre class="xs bad"><span class="c">// 反例（零信息）</span>
+<span class="c">// 设置碰撞为无碰撞</span>
+Mesh-&gt;<span class="f">SetCollisionEnabled</span>(<span class="t">ECollisionEnabled</span>::NoCollision);</pre>
+  <pre class="xs good" style="margin-top:20px"><span class="c">// 正例 —— BEMonsterVariantComponent.cpp:477</span>
+<span class="c">// 第二个参数 bReinitPose <span class="hl">必须</span>是 false。传 true（SetSkeletalMeshAsset 的默认行为）</span>
+<span class="c">// 会走 InitAnim(true)，把 AnimInstance 重初始化、播放时钟归零 ——</span>
+<span class="c">// <span class="hl">一波怪同时跨过边界就是一排走路动画倒回第 0 帧。</span></span>
+Body-&gt;<span class="f">SetSkeletalMesh</span>(Target, <span class="c">/*bReinitPose=*/</span><span class="k">false</span>);</pre>
+  <p class="lead" style="margin-top:30px">标准：<b>没有这条注释，下一个人（或下一轮 AI）一定会踩坑</b> → 写；否则不写。</p>
+</section>
 
-        <!-- 21 修复 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>修复</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">不要问「现在在不在播」</span>
-                <h2 class="h2">要问「它到底会不会起来」。</h2>
-              </div>
-              <div class="stack">
-                <div class="code sm flag"><span class="c">// 轮询等蒙太奇起来，而不是当场下结论</span>
-GetWorld()-&gt;GetTimerManager().SetTimer(
-    PendingHandle, <span class="k">this</span>, &amp;<span class="t">ThisClass</span>::PollMontageStarted,
-    <span class="hl">0.02f</span>, <span class="k">true</span>);</div>
-                <table class="t">
-                  <tr>
-                    <th>兜底</th>
-                    <th>条件</th>
-                  </tr>
-                  <tr>
-                    <td class="key">超时</td>
-                    <td>0.35s 内没等到蒙太奇 —— 直接挂，不能无限等</td>
-                  </tr>
-                  <tr>
-                    <td class="key">武器再次切换</td>
-                    <td>取消未完成的挂载请求，避免挂错武器</td>
-                  </tr>
-                  <tr>
-                    <td class="key">组件销毁</td>
-                    <td>清定时器，避免野回调</td>
-                  </tr>
-                </table>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 12 负面知识 ========== -->
+<section class="slide">
+  <div class="kicker">为什么这对 AI 尤其关键</div>
+  <h2>这是 AI 唯一能拿到的<span class="acc">负面知识</span></h2>
+  <pre class="xs"><span class="c">// BEGA_WeaponFire.cpp:344</span>
+<span class="c">// <span class="hl">必须</span>走 ApplyGameplayEffectSpecToOwner 而不是 ASC-&gt;ApplyGameplayEffectSpecToSelf：</span>
+<span class="c">// 后者不带预测键，GAS 对「客户端 + 无预测键 + 非 Instant GE」是直接拒绝的 ——</span>
+<span class="c">// 冷却标签在客户端根本没加上，ActivationBlockedTags 形同虚设。</span>
+<span class="c">// 从按下到服务器冷却标签复制回来的那一个 RTT 里，能力每帧激活一次 ——</span>
+<span class="c">// 一次扣扳机打出好几发、抛好几个壳。</span>
+<span class="c">// <span class="err">单机/监听服务器上因为本地就是权威、GE 立刻生效，所以看不到；</span></span>
+<span class="c">// <span class="err">只有连独立服务器的客户端会犯。</span></span></pre>
+  <div class="grid2" style="margin-top:28px">
+    <div class="card"><p>AI 的训练数据里<b>全是"正确的写法"</b>。</p></div>
+    <div class="card acc"><p>"在我们这个系统里哪些正确写法是错的"<br>—— <b>只能靠注释传递。</b></p></div>
+  </div>
+  <div class="note">最后两行直接决定：下一轮 AI 会不会建议"用更简洁的 ApplyGameplayEffectSpecToSelf"。没有这两行，它一定会建议，理由还很正当。</div>
+</section>
 
-        <!-- 22 同步直觉 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>AI 的同步直觉</span>
-          </div>
-          <div class="main">
-            <div class="cols c-1-1" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">一个稳定的失效模式</span>
-                <h2 class="h1">AI 默认世界<br />是同步的。</h2>
-              </div>
-              <div class="stack">
-                <p class="lead">
-                  它写出的代码几乎总是假设「上一行的效果在下一行已经生效」。在单机逻辑里这通常成立，在网络同步里几乎总是不成立。
-                </p>
-                <div class="card">
-                  <div class="card-h">凡是跨端的因果，都要人来点明它是异步的。</div>
-                  <div class="card-b">
-                    这不是模型能力问题，是它缺少这个项目的时序事实。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 13 错误注释 · 高潮 ========== -->
+<section class="slide">
+  <div class="kicker">真实事故 · 本项目</div>
+  <h2><span class="badc">反面案例</span>：一条自信的错误注释</h2>
+  <pre class="sm bad">bReplicates = <span class="k">true</span>;
+<span class="c">// 物理只在服务器模拟（见 StartDropPhysics），客户端完全靠移动复制拿落点。</span>
+<span class="c">// <span class="err">不开这个，掉落会原地悬空不动。</span></span>
+<span class="f">SetReplicateMovement</span>(<span class="k">true</span>);</pre>
+  <p class="lead" style="margin-top:28px">注释写得斩钉截铁，带因果、带症状描述 —— <b>完全符合"好注释"的形式。</b></p>
+  <p class="lead" style="margin-top:18px">
+    问题是它是 <span class="badc" style="font-size:34px;font-weight:800">错的</span>。
+  </p>
+  <p style="margin-top:16px"><span class="mono acc">AActor::bReplicateMovement</span> 在 AActor 构造函数里的默认值<b>就是 true</b>。这行是<b>空操作</b>。</p>
+</section>
 
-        <!-- 23 证据先于断言 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>「编译通过了」也是一句断言</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">另一个真实场景</span>
-                <h2 class="h2">它以为编完了，<br />其实根本没编。</h2>
-              </div>
-              <div class="stack">
-                <div class="code sm"><span class="err">ERROR</span>: Live Coding cannot apply changes to header files.
-       Close the editor and perform a full rebuild.</div>
-                <p class="lead">
-                  改了头文件却走 Live Coding，构建被直接拒绝。如果没人去看这行输出，「已完成」就会一路传下去。
-                </p>
-                <div class="card">
-                  <div class="card-h">证据先于断言。</div>
-                  <div class="card-b">
-                    不是「我觉得应该好了」，而是「这是构建输出 / 这是日志 / 这是截图」。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 14 污染链 ========== -->
+<section class="slide">
+  <div class="kicker">后果</div>
+  <h2>错误归因被<span class="acc">固化进了代码库</span></h2>
+  <div class="flow">
+    <div class="step">有人（或 AI）在"掉落物客户端悬空"这个 bug 上做了<b>错误归因</b></div>
+    <div class="arr">↓</div>
+    <div class="step">写了一个<b>没有效果的修复</b></div>
+    <div class="arr">↓</div>
+    <div class="step">把错误归因<b>以注释的形式</b>写进代码</div>
+    <div class="arr">↓</div>
+    <div class="step end">bug 一直没修好，但代码里有一段看起来很权威的注释宣称它修好了<br><span class="dim" style="font-size:17px">任何后续接手的人 —— 包括 AI —— 都会跳过这块</span></div>
+  </div>
+  <p class="lead" style="margin-top:30px"><b>注释是知识资产，也是知识污染源。</b><br>AI 会<span class="mark">无条件继承</span>代码库里的既有假设。</p>
+</section>
 
-        <!-- 24 验证环境脚本化 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>03 · 验证约束</span><span>把验证环境固化下来</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">降低验证的门槛</span>
-                <h2 class="h2">一个 bat 文件，<br />一键起 1 服 N 客。</h2>
-              </div>
-              <div class="stack">
-                <div class="code sm">Tools/<span class="hl">StartTest_1S4C.bat</span>
-  <span class="c">→ 起 1 个 DedicatedServer</span>
-  <span class="c">→ 起 N 个 Client 并自动连入</span>
-  <span class="c">→ 每个窗口独立日志，便于对照</span></div>
-                <ul class="bullets sm">
-                  <li>
-                    <span>验证成本越低，「先测一下再说」才可能成为默认动作</span>
-                  </li>
-                  <li><span>环境固定，AI 给出的复现步骤才可能被原样执行</span></li>
-                  <li><span>脚本本身就是一份可执行的、不会过时的环境文档</span></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 15 注释硬规则 ========== -->
+<section class="slide">
+  <div class="kicker">由此定下的规则</div>
+  <h2>注释规范三条硬要求</h2>
+  <ol>
+    <li>涉及<b>引擎默认行为</b>的结论，必须注明<span class="acc">验证方式</span>（引擎版本 + 怎么观察到的），而不只是结论</li>
+    <li>网络相关代码必须注明<b>"在哪种环境能复现、哪种环境测不出来"</b></li>
+    <li>设计取舍写在<b>使用现场</b>（属性 tooltip、函数头），不是只写在提交信息里 —— 策划在属性面板上能读到的才算数</li>
+  </ol>
+  <div class="card acc" style="margin-top:20px">
+    <p><b>一条自信的错误注释，比没有注释危害大得多。</b></p>
+  </div>
+</section>
 
-        <!-- 25 章节 04 -->
-        <section class="slide cover">
-          <div class="chapter-num">04</div>
-          <div class="rule"></div>
-          <h2 class="h1">分歧怎么解决</h2>
-          <p class="lead" style="max-width: 620px">
-            人说「不对」，AI 说「应该对」。谁听谁的？—— 谁有证据听谁的。
-          </p>
-        </section>
+<!-- ========== 16 SECTION 3 ========== -->
+<section class="slide s-section">
+  <div class="num">03</div>
+  <h1>验证约束</h1>
+  <div class="sub">没跑起来的代码不算完成</div>
+</section>
 
-        <!-- 26 一句话 bug 报告 -->
-        <section class="slide cover">
-          <div class="quote-mark">"</div>
-          <div class="quote-text">掉落物飘在空中，不掉下来。</div>
-          <div class="stack sm">
-            <span class="kicker">全部已知信息</span>
-            <span class="cap" style="font-family: var(--f-mono)">
-              没有日志 · 没有复现步骤 · 没有截图
-            </span>
-          </div>
-        </section>
+<!-- ========== 17 需求 ========== -->
+<section class="slide">
+  <div class="kicker">案例：武器挂载 notify 重构</div>
+  <h2>需求很清楚</h2>
+  <div class="quote">
+    "把 ShowWeapon 这个 notify 的机制修改成为，不是显示武器，<br>而是在这个消息的时机<b>真正在做 attach 模型</b>的行为，<br>不需要勾选当前是装备还是不装备，<b>这里自动判定</b>。"
+    <span class="who">—— 需求原文</span>
+  </div>
+  <p class="lead" style="margin-top:36px">AI 的第一版实现思路：</p>
+  <pre class="sm" style="margin-top:16px"><span class="k">if</span> (<span class="f">IsPlayingMontage</span>())
+{
+    PendingAttachSlots.<span class="f">Add</span>(Key);            <span class="c">// 正在播动画 → 挂起等 notify</span>
+}
+<span class="k">else</span>
+{
+    <span class="f">AttachSlotVisual</span>(Slot, V, bActive);     <span class="c">// 没在播 → 当场挂上</span>
+}</pre>
+  <p style="margin-top:22px"><b>读起来无懈可击。编译通过。</b></p>
+</section>
 
-        <!-- 27 三层信息 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>一句话背后缺的三层信息</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: baseline">
-              <div class="stack sm">
-                <span class="kicker">先把问题说清楚</span>
-                <h2 class="h2">现象<br />复现条件<br />对照组</h2>
-              </div>
-              <div class="stack">
-                <table class="t">
-                  <tr>
-                    <th>层</th>
-                    <th>要回答什么</th>
-                    <th>这次的答案</th>
-                  </tr>
-                  <tr>
-                    <td class="key">现象</td>
-                    <td>到底看到了什么</td>
-                    <td>物品停在空中，不下落、不响应重力</td>
-                  </tr>
-                  <tr>
-                    <td class="key">复现条件</td>
-                    <td>什么情况下会出现</td>
-                    <td class="hit">只在客户端；服务端窗口看是正常的</td>
-                  </tr>
-                  <tr>
-                    <td class="key">对照组</td>
-                    <td>什么情况下不出现</td>
-                    <td>单机模式完全正常；后进房的客户端也正常</td>
-                  </tr>
-                </table>
-                <div class="note">
-                  「只在客户端」+「后进房正常」两条合起来，范围已经缩掉九成。
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 18 反馈 ========== -->
+<section class="slide" style="justify-content:center">
+  <div class="kicker">然后测试反馈来了</div>
+  <div class="quote" style="font-size:38px;border-left-color:var(--bad)">
+    "目前编译后测试 发现效果不对啊，<br>武器是<span class="badc">从第一帧就挂在手上</span>了，<br>而不是等 触发了 notify。"
+  </div>
+  <p class="lead" style="margin-top:44px">这句话的结构：<b>实际值 + 预期值 + 精确时间点</b>。<br><span class="dim">—— 后面 §6 会专门讲，为什么这一句抵得上十句"不生效"。</span></p>
+</section>
 
-        <!-- 28 取证清单 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>取证清单</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">给 AI 的第一条指令</span>
-                <h2 class="h2">先取证，<br />不要提方案。</h2>
-              </div>
-              <div class="stack">
-                <ul class="bullets sm">
-                  <li><span>这个 pickup 是哪个类？根组件是什么？</span></li>
-                  <li><span>有没有配物理资产？碰撞预设是什么？</span></li>
-                  <li>
-                    <span>服务端和客户端的
-                      <span class="amber">bSimulatePhysics</span> 分别是什么值？</span>
-                  </li>
-                  <li><span>打一条日志，把两端的值都打出来</span></li>
-                </ul>
-                <div class="card">
-                  <div class="card-h">「不要提修复方案」这半句必须说出口。</div>
-                  <div class="card-b">
-                    不说，它会在信息不全的时候先给你一个补丁，然后你们开始讨论那个补丁 —— 而不是讨论这个 bug。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 19 时序真相 ========== -->
+<section class="slide">
+  <div class="kicker">根因</div>
+  <h2>两条路径的到达顺序<span class="badc">没有任何保证</span></h2>
+  <div class="rail">
+    <div class="who">装备状态</div>
+    <div><div class="bar a">属性复制 <span class="mono" style="font-size:16px">OnRep_Active / OnRep_Equipped</span> → 何时到达取决于网络</div></div>
+    <div class="who">装备动画</div>
+    <div><div class="bar b">GameplayCue → 而且因 <span class="mono" style="font-size:16px">LinkAnimClassLayers</span> 重链问题被刻意 <span class="mono" style="font-size:16px">SetTimerForNextTick</span> 延后一帧</div></div>
+    <div class="who">结果</div>
+    <div><div class="bar x">在"挂起"的那一刻问 <span class="mono">IsPlayingMontage()</span> —— <b>答案几乎永远是 false</b></div></div>
+  </div>
+  <p class="lead" style="margin-top:34px">
+    这个同步判断 <b>在逻辑上完全正确，在时序上完全无效。</b>
+  </p>
+</section>
 
-        <!-- 29 六条假设 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>逐条排除</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: baseline">
-              <div class="stack sm">
-                <span class="kicker">列完再排</span>
-                <h2 class="h2">六条假设，<br />五条排除。</h2>
-              </div>
-              <table class="t">
-                <tr>
-                  <th>假设</th>
-                  <th>结论</th>
-                </tr>
-                <tr>
-                  <td>没配物理资产</td>
-                  <td>排除 —— 资产存在且配置正确</td>
-                </tr>
-                <tr>
-                  <td>碰撞预设不对</td>
-                  <td>排除 —— 与单机一致</td>
-                </tr>
-                <tr>
-                  <td>重力被关掉了</td>
-                  <td>排除 —— 服务端表现正常</td>
-                </tr>
-                <tr>
-                  <td>客户端根本没收到 Actor</td>
-                  <td>排除 —— 位置能看到、能交互</td>
-                </tr>
-                <tr>
-                  <td>蓝图里覆盖了物理设置</td>
-                  <td>排除 —— 蓝图无相关节点</td>
-                </tr>
-                <tr>
-                  <td class="hit">客户端的物理模拟状态从未被真正同步</td>
-                  <td class="hit">成立</td>
-                </tr>
-              </table>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 20 修复 ========== -->
+<section class="slide">
+  <div class="kicker">修复：双向兜底</div>
+  <h2>不再问"现在在播吗"，改成"等它起来"</h2>
+  <pre class="xs good"><span class="c">// 不能在这儿直接问"在播蒙太奇吗" —— 装备状态走复制、蒙太奇走 GameplayCue，</span>
+<span class="c">// 两条路到达的先后没有保证，挂起的这一刻多半还没开始播，问了永远是否，</span>
+<span class="c">// <span class="hl">结果就是枪在第一帧就挂到手上了。改成轮询等它起来。</span></span>
+PendingAttachGraceEnd = World-&gt;<span class="f">GetTimeSeconds</span>() + PendingAttachGraceSeconds;
+World-&gt;<span class="f">GetTimerManager</span>().<span class="f">SetTimer</span>(PendingAttachTimerHandle, <span class="k">this</span>,
+    &amp;<span class="t">UBEEquipmentVisualizationComponent</span>::TickPendingAttach, <span class="s">0.02f</span>, <span class="c">/*bLoop=*/</span><span class="k">true</span>);</pre>
+  <table class="sm" style="margin-top:24px">
+    <tbody><tr><td class="k1">复制先到、动画后到</td><td>20ms 轮询 0.25s 宽限窗：动画起来交给 notify，一直不起来 → 这把枪没配蒙太奇，当场挂上</td></tr>
+    <tr><td class="k1">notify 先到、复制后到</td><td>本地预测动画 + 慢一步复制 → 用 <span class="mono">LastCommitNotifyTime</span> 时间戳兜住，"该等的那帧刚过"就立即提交</td></tr>
+    <tr><td class="k1">蒙太奇忘了摆 notify</td><td>动画播完时一次性兜底提交</td></tr>
+  </tbody></table>
+</section>
 
-        <!-- 30 根因链 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>根因</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">五步走到底</span>
-                <h2 class="h2">它是个<br />一次性陷阱。</h2>
-              </div>
-              <div class="chain">
-                <div class="node">
-                  客户端首次收到该 Actor 时，引擎调用一次
-                  <span class="amber">SyncReplicatedPhysicsSimulation()</span>
-                </div>
-                <div class="node">
-                  这次同步由 <span class="amber">bNetCheckedInitialPhysicsState</span>
-                  把守，只会执行一次
-                </div>
-                <div class="node">
-                  掉落发生在这次同步之后 —— 服务端此时才开启物理模拟
-                </div>
-                <div class="node">
-                  后续的复制走 <span class="amber">bRepPhysics</span>
-                  分支，而该分支并不会把「开始模拟」这件事补给客户端
-                </div>
-                <div class="node last">客户端永远停留在「不模拟」状态 —— 物体悬空</div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 21 教训 ========== -->
+<section class="slide">
+  <div class="kicker">这个案例说明什么</div>
+  <h2>AI 的默认直觉是"<span class="acc">当前帧可观测状态</span>"</h2>
+  <p class="lead">它会写 <span class="mono">if (当前在播动画)</span>，因为在<b>单机、同步</b>的心智模型里这就是对的。</p>
+  <p class="lead" style="margin-top:18px">而分布式系统、异步事件、复制时序 —— 这些地方 <span class="mark"><b>"当前帧的可观测状态"根本不是真相</b></span>。</p>
+  <div class="card bad" style="margin-top:34px">
+    <div class="tag bad">关键事实</div>
+    <p>这个 bug <b>只能通过运行时验证暴露</b>。<br>编译通过、没有警告、代码审查也看不出问题（逻辑本身是自洽的）。<br>只有真的跑一遍、看到枪在第一帧就在手上，才能发现。</p>
+  </div>
+  <p class="lead" style="margin-top:28px"><b>推论：运行时验证不是"质量保证环节"，而是"<span class="acc">信息输入环节</span>"。</b><br>人在闭环里提供的不是"批准"，而是 AI 拿不到的那部分事实。</p>
+</section>
 
-        <!-- 31 两条路 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>找到根因之后的两条路</span>
-          </div>
-          <div class="main">
-            <div class="compare">
-              <div class="panel">
-                <span class="tag">方案 A · 赌一个假设</span>
-                <h3 class="h3">在客户端手动打开物理模拟。</h3>
-                <p class="lead">
-                  三行代码就能让现象消失。但它依赖「客户端自己模拟出的结果和服务端一致」这个假设。
-                </p>
-                <p class="lead">
-                  两端物理各算各的，落点必然会分叉 —— 现在看不出来，联机久了一定出问题。
-                </p>
-              </div>
-              <div class="divider"></div>
-              <div class="panel">
-                <span class="tag hit">方案 B · 改设计</span>
-                <h3 class="h3">只复制最终静止状态。</h3>
-                <p class="lead">
-                  客户端不参与物理演算，只接收服务端算完的落点与朝向，直接摆好。
-                </p>
-                <p class="lead">
-                  代价是丢掉下落过程的动画；收益是两端永远一致，且带宽更低。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 22 证据先于断言 ========== -->
+<section class="slide">
+  <div class="kicker">验证闭环断掉的时候</div>
+  <h2>必须明说</h2>
+  <pre class="sm bad">Unable to build while Live Coding is active. Exit the editor and game,
+or press Ctrl+Alt+F11 if iterating on code in the editor or game
+<span class="err">Result: Failed (OtherCompilationError)</span></pre>
+  <p style="margin-top:24px">改动了头文件（新增成员 / <span class="mono">UPROPERTY</span> / 方法 / 枚举值）→ <span class="mono">Ctrl+Alt+F11</span> 不够，必须关编辑器。<br>武器那几轮<b>连续三次</b>改动都涉及头文件 → <span class="badc">连续三轮代码没有被编译过。</span></p>
+  <div class="card acc" style="margin-top:30px">
+    <h3>硬规则</h3>
+    <p style="font-size:25px">不要在没有跑过验证命令的情况下说"修好了 / 完成了 / 测试通过了"。<br><b class="acc">证据先于断言。</b></p>
+  </div>
+  <div class="note">这条最容易被违反 —— 因为 AI 输出的最后一段天然倾向于是一个总结，而总结天然倾向于是正面的。</div>
+</section>
 
-        <!-- 32 实现 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>方案 B 的实现</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">显式复制静止状态</span>
-                <h2 class="h2">把「结果」<br />变成一等公民。</h2>
-              </div>
-              <div class="stack">
-                <div class="code sm flag"><span class="t">UPROPERTY</span>(Replicated) <span class="t">FVector_NetQuantize100</span> RestLocation;
+<!-- ========== 23 验证环境脚本化 ========== -->
+<section class="slide">
+  <div class="kicker">性价比最高的基建</div>
+  <h2>把"能复现问题的最小环境"脚本化</h2>
+  <pre class="sm">Tools\StartTest_1S4C.bat          <span class="c">// 1 监听服务器 + N 个独立客户端</span>
+
+<span class="k">set</span> "MAP=/Game/Maps/GameLoop/L_Lobby"
+<span class="k">set</span> "CLIENTS=2"
+<span class="f">start</span> "BE Server" ... "%MAP%?listen" -game -log -port=%PORT%
+<span class="f">timeout</span> /t 12 /nobreak &gt;nul
+<span class="k">for</span> /L %%i <span class="k">in</span> (1,1,%CLIENTS%) <span class="k">do</span> <span class="f">call</span> :launch_client %%i</pre>
+  <div class="card bad" style="margin-top:26px">
+    <p><b>如果验证环境不对，一整类 bug 是永远测不出来的。</b></p>
+    <p class="dim" style="margin-top:10px">监听服务器测不出的坑：GAS 预测键去重 · 物理复制 · Cue 本地丢弃 · 复制时序竞态</p>
+  </div>
+  <p style="margin-top:24px">意义不止"省几次点击"：<b>AI 可以调用脚本，但 AI 没法帮你在编辑器里点十下鼠标。</b></p>
+</section>
+
+<!-- ========== 24 SECTION 4 ========== -->
+<section class="slide s-section">
+  <div class="num">04</div>
+  <h1>分歧怎么解决</h1>
+  <div class="sub">一次完整的排查复盘 —— 掉落物在客户端悬浮</div>
+</section>
+
+<!-- ========== 25 输入 ========== -->
+<section class="slide">
+  <div class="kicker">输入：一句话</div>
+  <div class="quote" style="font-size:30px">
+    "在客户端下 spawned pickup 类的物理似乎没有模拟，<b>模型悬浮在空中</b>，<br>在 <b>listen server 下运行则是正常的</b>。"
+  </div>
+  <table style="margin-top:36px">
+    <tbody><tr><th style="width:150px">层</th><th style="width:260px">内容</th><th>作用</th></tr>
+    <tr><td class="k1">现象</td><td>模型悬浮在空中</td><td>排除"落点偏了""穿地了"，指向<b>完全没动过</b></td></tr>
+    <tr><td class="k1">复现条件</td><td>客户端</td><td>指向客户端侧</td></tr>
+    <tr><td class="k1 acc">对照组</td><td class="acc">监听服务器正常</td><td class="acc"><b>决定性</b>：服务器物理逻辑没问题，问题在复制链路</td></tr>
+  </tbody></table>
+  <p class="lead" style="margin-top:30px"><b>这是人能提供而 AI 提供不了的东西</b> —— AI 跑不了游戏，看不到画面，做不了 A/B 对照。</p>
+</section>
+
+<!-- ========== 26 取证与推理分离 ========== -->
+<section class="slide">
+  <div class="kicker">第一步</div>
+  <h2>收集事实，而不是猜</h2>
+  <p class="lead">AI 做的第一件事不是提方案，而是派探索子 agent，只回答事实性问题：</p>
+  <ul class="tight" style="margin-top:22px">
+    <li>pickup actor 的类名和路径</li>
+    <li>构造函数里 root component 是什么、有没有物理设置</li>
+    <li>复制相关：<span class="mono" style="font-size:19px">bReplicates / bReplicateMovement / GetLifetimeReplicatedProps</span></li>
+    <li>spawn 调用点在哪、是不是只在服务器执行</li>
+    <li><span class="mono" style="font-size:19px">BeginPlay / OnRep</span> 里有没有按 net role 分支</li>
+  </ul>
+  <div class="card acc" style="margin-top:26px">
+    <p>并且在 prompt 里明确写了：<b class="acc">"只输出这些，不要提修复方案。"</b></p>
+    <p class="dim" style="margin-top:10px">让 AI 在取证阶段就开始提方案，会导致它<b>为了支撑方案而选择性收集事实</b>。</p>
+  </div>
+</section>
+
+<!-- ========== 27 假设排除 ========== -->
+<section class="slide">
+  <div class="kicker">第二步</div>
+  <h2>枚举假设，逐个排除</h2>
+  <table class="sm">
+    <tbody><tr><th style="width:46%">假设</th><th>为什么排除</th></tr>
+    <tr><td>根组件 Mobility 是 Static</td><td>那样服务器也会失效，与"监听服务器正常"矛盾</td></tr>
+    <tr><td>bNetTemporary / DORM_Initial 只有初始复制</td><td>代码里没设，蓝图不太可能改</td></tr>
+    <tr><td>网络相关性 / Cull Distance</td><td>掉落物就在玩家面前</td></tr>
+    <tr><td>ItemDefinition 对象引用在客户端解析失败</td><td>那样客户端连模型都看不到，与"模型悬浮"矛盾</td></tr>
+    <tr><td>客户端物理跑起来但被服务器校正拉住</td><td>那样落点会接近地面，不会停在出生高度</td></tr>
+    <tr><td class="badc">SetReplicateMovement(true) 没生效</td><td class="badc">这行本来就是空操作 —— 注释是错的（见 §2）</td></tr>
+  </tbody></table>
+  <div class="note">对照组这一个信息，就干掉了表格里第一行和一大类假设。</div>
+</section>
+
+<!-- ========== 28 根因链 ========== -->
+<section class="slide">
+  <div class="kicker">收敛到的结论</div>
+  <h2>引擎的<span class="acc">一次性</span>初始化陷阱</h2>
+  <div class="flow">
+    <div class="step">客户端 actor 刚 spawn：Mesh 还没 StaticMesh、还是构造函数设的 <span class="mono">NoCollision</span> → <b>没有刚体</b></div>
+    <div class="arr">↓</div>
+    <div class="step"><span class="mono">AActor::PostNetReceive()</span> → <span class="mono">SyncReplicatedPhysicsSimulation()</span> 恰好在这一刻跑<br><span class="mono">SetSimulatePhysics(true)</span> <b>静默失败</b>，且被 <span class="mono">bNetCheckedInitialPhysicsState</span> 守着 —— <b class="badc">只跑一次，不重试</b></div>
+    <div class="arr">↓</div>
+    <div class="step">服务器一路报 <span class="mono">bRepPhysics = true</span> → 客户端一直走<b>物理校正分支</b></div>
+    <div class="arr">↓</div>
+    <div class="step">这条分支对"不在模拟的刚体"是<b>空操作</b>，位置分支 <span class="mono">PostNetReceiveLocationAndRotation</span> 轮不到</div>
+    <div class="arr">↓</div>
+    <div class="step end">客户端道具<b>永远停在初始复制位置</b> = 悬空</div>
+  </div>
+</section>
+
+<!-- ========== 29 关键决策 ========== -->
+<section class="slide">
+  <div class="kicker">第三步 —— 我认为整个过程最关键的决策</div>
+  <h2>推理只有 <span class="acc">80%</span> 置信度，怎么办？</h2>
+  <p class="dim" style="font-size:20px;margin-bottom:24px">能解释所有已观察现象，但这台机器上 UE 5.8 只装了二进制，<b>无法读引擎源码逐行确认</b>。</p>
+  <div class="grid2">
+    <div class="card bad">
+      <div class="tag bad">A · 赌假设</div>
+      <p>按根因做精确小修复 —— 在客户端拿到 mesh 之后手动重新同步一次物理状态。</p>
+      <p style="margin-top:12px"><b>改动最小。但假设错了 = 白改一轮。</b></p>
+    </div>
+    <div class="card good">
+      <div class="tag good">B · 改设计 ✓</div>
+      <p>落点的正确性<b>不再押在引擎的物理复制通道上</b> —— 服务器物理停下时，显式复制一份静止变换过来。</p>
+      <p style="margin-top:12px"><b>让结论不依赖那个假设。</b></p>
+    </div>
+  </div>
+  <p class="lead" style="margin-top:32px">选了 <b class="goodc">B</b>。</p>
+</section>
+
+<!-- ========== 30 修复代码 ========== -->
+<section class="slide">
+  <div class="kicker">显式复制最终状态</div>
+  <h2>本地物理降级为<span class="acc">纯表现</span></h2>
+  <pre class="xs"><span class="c">/** 服务器物理停下时的落点（权威）。 */</span>
+<span class="t">UPROPERTY</span>(Replicated) <span class="t">FVector_NetQuantize100</span> RestLocation;
 <span class="t">UPROPERTY</span>(Replicated) <span class="t">FRotator</span> RestRotation;
 
-<span class="c">// 放在最后一个属性上：前两个值到达后才触发回调</span>
-<span class="t">UPROPERTY</span>(<span class="hl">ReplicatedUsing = OnRep_RestState</span>) <span class="k">bool</span> bHasRested;</div>
-                <ul class="bullets sm">
-                  <li><span>顺序不是风格问题 —— 回调早触发一拍就会读到空位置</span></li>
-                  <li><span>NetQuantize100 把精度控制在 1cm，带宽省一半</span></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<span class="c">/** 落定标志。<span class="hl">放在最后一个复制属性上做通知</span>，保证回调时落点与朝向都已就位。 */</span>
+<span class="t">UPROPERTY</span>(ReplicatedUsing=OnRep_RestState) <span class="k">bool</span> bHasRested = <span class="k">false</span>;</pre>
+  <pre class="xs" style="margin-top:18px"><span class="k">void</span> <span class="t">ABESpawnedPickup</span>::<span class="f">OnRep_RestState</span>()
+{
+    <span class="c">// 客户端本地这一遍落体到此为止，剩下的以服务器落点为准。</span>
+    World-&gt;<span class="f">GetTimerManager</span>().<span class="f">ClearTimer</span>(PhysicsTimerHandle);
+    Mesh-&gt;<span class="f">SetSimulatePhysics</span>(<span class="k">false</span>);
+    <span class="f">SetActorLocationAndRotation</span>(<span class="t">FVector</span>(RestLocation), RestRotation, <span class="c">/*bSweep=*/</span><span class="k">false</span>);
+}</pre>
+  <p style="margin-top:22px">客户端本地物理起得来 → 落体过程好看；起不来 → 最坏悬 2 秒后被校正到地面，<b>不会永久悬空</b>。</p>
+</section>
 
-        <!-- 33 置信度 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>04 · 分歧怎么解决</span><span>置信度决定鲁棒等级</span>
-          </div>
-          <div class="main">
-            <div class="cols c-1-1" style="align-items: center">
-              <div class="stack">
-                <span class="kicker">一个可以直接抄走的判据</span>
-                <h2 class="h1">越不确定，<br />越要留证据。</h2>
-              </div>
-              <div class="stack">
-                <p class="lead">
-                  对根因有九成把握 —— 直接改，不留日志。把握只有五成 —— 改法要能在出错时自己喊出来。
-                </p>
-                <div class="code sm">UE_LOG(<span class="hl">BE_INV_LOG</span>, Warning,
-  <span class="s">"[Pickup] StartDropPhysics simulating=%d role=%d"</span>, ...);</div>
-                <div class="card">
-                  <div class="card-h">日志不是调试残留，是这次修改的置信度声明。</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 31 方法论 ========== -->
+<section class="slide">
+  <div class="kicker">方法论</div>
+  <h2>置信度 → 方案鲁棒等级</h2>
+  <ol>
+    <li>当根因分析置信度不足 100%、且"改设计"成本可接受时，<b>选择让正确性不依赖该假设的方案</b></li>
+    <li>同时<b>埋下能证伪 / 证实原假设的观测点</b>，把这一轮的不确定性转化成下一轮的确定性</li>
+  </ol>
+  <pre class="xs" style="margin-top:12px"><span class="f">BE_INV_LOG</span>(<span class="s">TEXT("[Pickup] StartDropPhysics: %s auth=%d role=%d simulating=%d")</span>,
+    *<span class="f">GetNameSafe</span>(<span class="k">this</span>), <span class="f">HasAuthority</span>(), (<span class="k">int32</span>)<span class="f">GetLocalRole</span>(), Mesh-&gt;<span class="f">IsSimulatingPhysics</span>());</pre>
+  <div class="card acc" style="margin-top:26px">
+    <p><b>AI 的根因分析，听起来的置信度永远高于实际置信度。</b><br>它会用非常确定的语气讲一个 80% 的结论。<br><span class="acc">人的职责是给这个结论打折，并据此选择方案的鲁棒性等级。</span></p>
+  </div>
+</section>
 
-        <!-- 34 章节 05 -->
-        <section class="slide cover">
-          <div class="chapter-num">05</div>
-          <div class="rule"></div>
-          <h2 class="h1">沟通范式</h2>
-          <p class="lead" style="max-width: 620px">
-            前面四章讲的是「为什么」。这一章是可以明天就用上的五个动作。
-          </p>
-        </section>
+<!-- ========== 32 SECTION 5 ========== -->
+<section class="slide s-section">
+  <div class="num">05</div>
+  <h1>沟通范式</h1>
+  <div class="sub">反过来看 —— 人这边什么样的一句话价值最高</div>
+</section>
 
-        <!-- 35 五个动作总表 -->
-        <section class="slide">
-          <div class="chrome"><span>05 · 沟通范式</span><span>总表</span></div>
-          <div class="main stack">
-            <div class="stack sm">
-              <span class="kicker">全部结论压缩成五行</span>
-              <h2 class="h2">五个动作。</h2>
-            </div>
-            <table class="t">
-              <tr>
-                <th>动作</th>
-                <th>做法</th>
-                <th>解决什么</th>
-              </tr>
-              <tr>
-                <td class="key">给事实，不给结论</td>
-                <td>现象 / 复现条件 / 对照组</td>
-                <td>避免一开始就讨论错的补丁</td>
-              </tr>
-              <tr>
-                <td class="key">先取证，后方案</td>
-                <td>明确说「不要提修复方案」</td>
-                <td>避免信息不全时的猜测</td>
-              </tr>
-              <tr>
-                <td class="key">对称扩展</td>
-                <td>「和 X 一样处理」</td>
-                <td>一句话带出整条路径</td>
-              </tr>
-              <tr>
-                <td class="key">交还决策权</td>
-                <td>影响面超出代码就回来问</td>
-                <td>避免擅自改动约定</td>
-              </tr>
-              <tr>
-                <td class="key hit">遇阻不绕</td>
-                <td class="hit">卡住就报错，不换路</td>
-                <td class="hit">避免绕出一个更大的坑</td>
-              </tr>
-            </table>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 33 五个动作总表 ========== -->
+<section class="slide">
+  <div class="kicker">全部来自真实对话原文</div>
+  <h2>很短，但每个字都在<span class="acc">缩小搜索空间</span></h2>
+  <table class="sm">
+    <tbody><tr><th style="width:200px">动作</th><th style="width:36%">例句</th><th>为什么有效</th></tr>
+    <tr><td class="k1">报 bug 带<span class="acc">对照组</span></td><td>"客户端悬浮，listen server 正常"</td><td>把范围从"物理系统"缩到"复制链路"</td></tr>
+    <tr><td class="k1">说<span class="acc">偏差</span>不说"不对"</td><td>"第一帧就挂手上了，而不是等 notify"</td><td>实际值+预期值+时间点 → <b>零次反问定位</b></td></tr>
+    <tr><td class="k1">给<span class="acc">约束</span>不给实现</td><td>"不需要勾选，这里自动判定"</td><td>保留实现空间，同时携带了意图</td></tr>
+    <tr><td class="k1">用<span class="acc">参照物</span>压缩规格</td><td>"和 equip 一样"</td><td>五个字指定四件事（前提：结构一致）</td></tr>
+    <tr><td class="k1">明确说<span class="acc">不要做什么</span></td><td>暂缓清单</td><td>防止 AI 每轮重新发现同一批问题</td></tr>
+  </tbody></table>
+</section>
 
-        <!-- 36 三种说法 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>05 · 沟通范式</span><span>动作一 · 给事实</span>
-          </div>
-          <div class="main stack">
-            <div class="stack sm">
-              <span class="kicker">同一个 bug</span>
-              <h2 class="h2">三种说法，三种代价。</h2>
-            </div>
-            <table class="t">
-              <tr>
-                <th>说法</th>
-                <th>AI 会做什么</th>
-              </tr>
-              <tr>
-                <td>「掉落物有问题，你修一下」</td>
-                <td>开始通读整个 pickup 模块，然后给一个泛泛的加固补丁</td>
-              </tr>
-              <tr>
-                <td>「掉落物物理没同步，加上同步」</td>
-                <td>照做 —— 而这正好是上一页那条会分叉的错路</td>
-              </tr>
-              <tr>
-                <td class="hit">「客户端悬空，服务端正常，单机正常，后进房正常」</td>
-                <td class="hit">直接锁定「首次同步之后才开始模拟」这一类原因</td>
-              </tr>
-            </table>
-            <div class="note">
-              第二种最危险：它听起来最专业，但把结论当成了事实塞给对方。
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 34 说偏差 ========== -->
+<section class="slide">
+  <div class="kicker">展开一条</div>
+  <h2>同一个 bug，三种说法</h2>
+  <table>
+    <tbody><tr><th style="width:52%">反馈</th><th>AI 能做什么</th></tr>
+    <tr><td class="badc">"不生效"</td><td>只能从头重读全部代码，或反问</td></tr>
+    <tr><td class="dim">"武器挂载有问题"</td><td>缩到武器挂载模块，但不知道是位置错、时机错还是没挂上</td></tr>
+    <tr><td class="goodc"><b>"从第一帧就挂在手上了，<br>而不是等触发 notify"</b></td><td class="goodc"><b>立刻定位到"挂起判定失效"这一个点</b></td></tr>
+  </tbody></table>
+  <p class="lead" style="margin-top:34px">第三种直接告诉了 AI：挂载逻辑跑通了（否则不会挂上），问题在"延迟提交"那一步。<br>剩下只需回答一个问题 —— 为什么挂起没生效。</p>
+  <div class="card good" style="margin-top:26px"><p>这次从收到反馈到定位根因，<b>中间没有任何一次反问。</b></p></div>
+</section>
 
-        <!-- 37 对称扩展 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>05 · 沟通范式</span><span>动作三 · 对称扩展</span>
-          </div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">五个字换四件事</span>
-                <h2 class="h2">「和 equip 一样。」</h2>
-              </div>
-              <div class="stack">
-                <ul class="bullets sm">
-                  <li><span>加一个 UnequipMontage 配置项，放在对称位置</span></li>
-                  <li><span>走同一套 notify 驱动的挂载 / 卸载时序</span></li>
-                  <li><span>同样的超时兜底与中途取消处理</span></li>
-                  <li><span>同样的日志前缀，便于并排对照</span></li>
-                </ul>
-                <div class="card">
-                  <div class="card-h">
-                    前提是结构本来就对称 —— 第一章做的事，在这里才开始兑现。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 35 参照物 ========== -->
+<section class="slide">
+  <div class="kicker">压缩比最高的一句</div>
+  <h2>"在武器配置中再增加 Unequip …… <span class="acc">和 equip 一样</span>"</h2>
+  <p class="lead">五个字，实际指定了四件事：</p>
+  <ol style="margin-top:22px">
+    <li>配置字段加在 <span class="mono" style="font-size:20px">BEWeaponDefinition.h</span> 里 <span class="mono" style="font-size:20px">CharacterEquipMontage</span> 旁边，命名对称</li>
+    <li><span class="mono" style="font-size:20px">EBEWeaponCueAction</span> 枚举追加 <span class="mono" style="font-size:20px">Unequip</span>（且追加在末尾，避免改变既有数值）</li>
+    <li>播放路径复用同一个 <span class="mono" style="font-size:20px">UGameplayCueNotify_Static</span>，通过 <span class="mono" style="font-size:20px">RawMagnitude</span> 传 action</li>
+    <li>蒙太奇里复用同一个 <span class="mono" style="font-size:20px">Attach Weapon</span> notify</li>
+  </ol>
+  <div class="card acc" style="margin-top:24px">
+    <p><b>这种压缩之所以成立，前提是代码结构本身足够一致。</b><br><span class="dim">如果 equip 的实现是散在三个模块里的特例代码，"和 equip 一样"就什么都没指定。</span></p>
+  </div>
+  <div class="note">§1 讲的结构约束，复利在这里兑现。</div>
+</section>
 
-        <!-- 38 副产物 -->
-        <section class="slide">
-          <div class="chrome"><span>05 · 沟通范式</span><span>副产物</span></div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">意料之外</span>
-                <h2 class="h2">对称扩展顺手<br />挖出了三个旧 bug。</h2>
-              </div>
-              <div class="stack">
-                <ul class="bullets sm">
-                  <li>
-                    <span>Equip 路径上有一处超时分支从来没被触发过 —— 参数写反了</span>
-                  </li>
-                  <li><span>中途切换武器时，旧的挂载请求没有取消 —— 概率性挂错</span></li>
-                  <li><span>日志前缀不统一，导致这类问题一直没能在日志里被看见</span></li>
-                </ul>
-                <div class="card">
-                  <div class="card-h">让 AI 照着 A 做 B，它会顺便告诉你 A 哪里不对。</div>
-                  <div class="card-b">
-                    它必须先完整读懂 A —— 这是人回头审视旧代码时很少有的耐心。
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 36 对称扩展挖 bug ========== -->
+<section class="slide">
+  <div class="kicker">这个任务的额外收获</div>
+  <h2>对称扩展连带挖出 <span class="acc">3 个</span>既有 bug</h2>
+  <ol class="tight">
+    <li><b>Cue 解析武器定义的方式是错的</b> —— 走 <span class="mono" style="font-size:19px">GetActiveWeaponDefinition()</span>，对"刚被收起的那把"必然拿不到</li>
+    <li><b>PlayEquipCue() 会在手持项没变时误播</b> —— 往空槽塞装备也会触发一次"拔枪"动画</li>
+    <li><b>Server_Unequip 之后缓存变脏</b> —— 可能驱动一个"模型已销毁的武器"的收起动画，空手比划</li>
+  </ol>
+  <p class="lead" style="margin-top:24px">这三个 bug 在"只有 Equip"的时候是<b>观察不到的</b> —— 单向流程恰好绕过了它们。</p>
+  <div class="card good" style="margin-top:22px">
+    <p><b>规律</b>：只实现了单向的系统（只有 A→B 没有 B→A、只有 add 没有 remove），补齐对称路径几乎一定会挖出既有 bug。<br><span class="dim">这类任务特别适合交给 AI —— 它做对称比较不知疲倦。</span></p>
+  </div>
+</section>
 
-        <!-- 39 边界 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>05 · 沟通范式</span><span>动作四 / 动作五</span>
-          </div>
-          <div class="main">
-            <div class="compare">
-              <div class="panel">
-                <span class="tag">交还决策权</span>
-                <h3 class="h3">影响面超出代码，就回来问。</h3>
-                <p class="lead">
-                  把测试脚本的客户端数从 4 改成 2，文件名
-                  <span class="amber">StartTest_1S4C.bat</span> 就对不上了。
-                </p>
-                <p class="lead">
-                  改名会动到别人的快捷方式和文档。这不是技术判断，是约定 —— 所以它停下来问，而不是顺手改掉。
-                </p>
-              </div>
-              <div class="divider"></div>
-              <div class="panel">
-                <span class="tag hit">遇阻不绕</span>
-                <h3 class="h3">卡住了就报错，不换路。</h3>
-                <p class="lead">
-                  Live Coding 拒绝应用头文件改动时，正确动作是停下来说「需要关编辑器全量重编」。
-                </p>
-                <p class="lead">
-                  错误动作是把改动挪进 .cpp 绕过去 —— 编译能过，设计被绕坏了。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 37 边界 ========== -->
+<section class="slide">
+  <div class="kicker">AI 这边的两条边界</div>
+  <h2>交还决策权 · 遇阻不绕</h2>
+  <div class="grid2">
+    <div class="card">
+      <div class="tag neu">案例 · 改 bat 文件</div>
+      <p class="dim" style="font-size:18px">"只需要运行 2 个客户端就行了"</p>
+      <p style="margin-top:12px">改了 <span class="mono" style="font-size:18px">CLIENTS=3→2</span>，<b>没改文件名</b> <span class="mono" style="font-size:18px">StartTest_1S4C.bat</span>，然后主动说明"名不副实了，要改名说一声"。</p>
+      <p style="margin-top:12px" class="acc"><b>文件名可能被桌面快捷方式、CI 脚本、肌肉记忆依赖 —— 这些 AI 看不见。</b></p>
+    </div>
+    <div class="card">
+      <div class="tag neu">案例 · Live Coding 挡编译</div>
+      <p class="dim" style="font-size:18px">诱惑：换构建目标 / 加跳过参数 / 只编单模块 / 干脆声称"应该没问题"</p>
+      <p style="margin-top:12px">实际做法：<b>诊断根因</b>（改了头文件，热重载不够用）→ 明确告诉人"关编辑器我编译" → 总结里标注未验证。</p>
+      <p style="margin-top:12px" class="acc"><b>遇到阻碍先诊断，不要为绕开阻碍而升级到破坏性操作。</b></p>
+    </div>
+  </div>
+  <div class="note">红线：<span class="mono">git reset --hard</span> · <span class="mono">--force</span> · <span class="mono">--no-verify</span> · 删文件</div>
+</section>
 
-        <!-- 40 澄清成本 -->
-        <section class="slide">
-          <div class="chrome">
-            <span>05 · 沟通范式</span><span>澄清是有成本的</span>
-          </div>
-          <div class="main">
-            <div class="compare">
-              <div class="panel">
-                <span class="tag">不该问 · 掉落物悬空那次</span>
-                <h3 class="h3">实际提问次数：0。</h3>
-                <p class="lead">
-                  本来可以先问五个问题：哪个 pickup 类？根组件是什么？配物理资产了吗？所有道具都这样还是个别？有日志吗？
-                </p>
-                <p class="lead">
-                  这五个问题全都能自己 grep 出来。直接取证 → 列六条假设 → 逐条排除。
-                </p>
-              </div>
-              <div class="divider"></div>
-              <div class="panel">
-                <span class="tag hit">该问 · 做这份 PPT 时</span>
-                <h3 class="h3">只问了一个封闭选择题。</h3>
-                <p class="lead">「做成单文件 HTML 演示，还是别的格式？」</p>
-                <p class="lead">
-                  猜错的代价：整个产物作废重做。回答的代价：一次点击。这种问题不问是失职。
-                </p>
-              </div>
-            </div>
-          </div>
-          <div class="foot">
-            <span>判据 = 猜错的返工代价 × 人回答这个问题的成本</span>
-            <span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 38 澄清成本 ========== -->
+<section class="slide">
+  <div class="kicker">一个小插曲</div>
+  <h2>澄清是<span class="acc">有成本</span>的</h2>
+  <p class="lead">AI 先弹了一个选择题问。<b>被直接拒绝</b>，然后回了一句：</p>
+  <div class="quote small" style="margin-top:22px">"先按照XXX来写。"</div>
+  <p class="lead" style="margin-top:30px">AI 问一个问题几乎零成本，<b>人回答一个问题要切换上下文</b>。<br>所以判断标准不是"AI 想不想确认"，而是：</p>
+  <div class="grid2" style="margin-top:22px">
+    <div class="card bad"><div class="tag bad">返工代价大</div><p>架构选型 · 数据结构 · 外部接口<br><b>→ 必须问</b></p></div>
+    <div class="card good"><div class="tag good">返工代价小</div><p>命名 · 文案 · 默认值<br><b>→ 直接做，并说明假设了什么</b></p></div>
+  </div>
+</section>
 
-        <!-- 41 AGENTS.md -->
-        <section class="slide">
-          <div class="chrome"><span>05 · 沟通范式</span><span>落成文件</span></div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: baseline">
-              <div class="stack sm">
-                <span class="kicker">仓库根目录 · AGENTS.md</span>
-                <h2 class="h2">约束要有一个<br />固定住址。</h2>
-              </div>
-              <table class="t">
-                <tr>
-                  <th>章节</th>
-                  <th>内容</th>
-                </tr>
-                <tr>
-                  <td class="key">§01</td>
-                  <td>项目结构与模块边界</td>
-                </tr>
-                <tr>
-                  <td class="key">§02</td>
-                  <td>命名与前缀规范</td>
-                </tr>
-                <tr>
-                  <td class="key">§03</td>
-                  <td>注释要求（为什么 / 为什么不 / 刻意取舍）</td>
-                </tr>
-                <tr>
-                  <td class="key">§04</td>
-                  <td>网络同步的既有约定与已知陷阱</td>
-                </tr>
-                <tr>
-                  <td class="key">§05</td>
-                  <td>构建与验证流程（含 Live Coding 限制）</td>
-                </tr>
-                <tr>
-                  <td class="key hit">§06–§09</td>
-                  <td class="hit">
-                    沟通契约：取证优先 · 交还决策权 · 遇阻不绕 · 证据先于断言
-                  </td>
-                </tr>
-              </table>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 39 AGENTS.md ========== -->
+<section class="slide">
+  <div class="kicker">行动项 · 已落地</div>
+  <h2>把这一切固化成 <span class="acc mono">AGENTS.md</span></h2>
+  <p class="dim" style="font-size:20px;margin-bottom:22px">一个讽刺的事实：我们有 5,396 行设计文档，却<b>没有任何一份写给 AI 看的规范文件</b>。所有约定每轮都要靠 AI 重新推断、或靠人重新口述。推断有误差，口述有遗漏。</p>
+  <table class="sm">
+    <tbody><tr><th style="width:230px">章节</th><th>内容</th></tr>
+    <tr><td class="k1 acc">§0 最重要的五条</td><td>时序禁令 / 证据先于断言 / 头文件与 Live Coding / 独立客户端验证 / 不改外部契约</td></tr>
+    <tr><td class="k1">§2 结构约定</td><td>目录镜像、前缀、职责域目录清单、配置单点化</td></tr>
+    <tr><td class="k1">§3 注释规范</td><td>"为什么"型标准 + 三条硬要求</td></tr>
+    <tr><td class="k1 acc">§4 网络与 GAS 硬约束</td><td>五条，每条对应一次真实事故，附代码位置</td></tr>
+    <tr><td class="k1">§5 构建与验证</td><td>编译命令、Live Coding 判据、测试脚本、日志宏</td></tr>
+    <tr><td class="k1">§7 反模式清单</td><td>九行：反模式 → 后果 → 正确做法</td></tr>
+    <tr><td class="k1 acc">§8 给人的一段</td><td>高信息密度的表达方式 —— <b>规范双向生效</b></td></tr>
+  </tbody></table>
+  <div class="note">维护规则写在文件末尾：<b>有新的踩坑就补进 §4 和 §7</b> —— 让它跟着事故增长，而不是一次写完就烂掉。</div>
+</section>
 
-        <!-- 42 稳定失效模式 -->
-        <section class="slide">
-          <div class="chrome"><span>收束</span><span>AI 的稳定失效模式</span></div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">这些不是偶发，是结构性的</span>
-                <h2 class="h2">知道它会在哪儿摔。</h2>
-              </div>
-              <ul class="bullets">
-                <li><span>默认世界是同步的 —— 跨端因果必须由人点明</span></li>
-                <li><span>把注释当事实 —— 一条错注释能污染一整条推理链</span></li>
-                <li><span>在信息不全时先给方案 —— 需要明确禁止</span></li>
-                <li><span>把「能编译」当成「做完了」—— 验证标准必须事先写死</span></li>
-                <li><span>遇阻时倾向绕路 —— 绕过去的往往正是设计本身</span></li>
-              </ul>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 40 总结 · 失效模式 ========== -->
+<section class="slide">
+  <div class="kicker">一页纸总结 · 1/2</div>
+  <h2>AI 的<span class="badc">稳定失效模式</span>（重点盯防）</h2>
+  <ol class="tight">
+    <li><b>同步直觉</b> —— 用"当前帧可观测状态"判断异步/复制时序的事 <span class="dim">→ 网络代码里几乎必错</span></li>
+    <li><b>自信的 80% 结论</b> —— 语气置信度永远高于实际置信度 <span class="dim">→ 人要打折，据此选方案鲁棒等级</span></li>
+    <li><b>继承错误假设</b> —— 无条件相信代码库里既有的注释 <span class="dim">→ 错误注释比没注释危害大</span></li>
+    <li><b>顺手多做</b> —— 不受控的 diff 膨胀 <span class="dim">→ 用显式"暂缓清单"和边界规则约束</span></li>
+    <li><b>正面总结倾向</b> —— 最后一段天然想说"完成了" <span class="dim">→ 硬规则：没跑过验证不许说修好了</span></li>
+  </ol>
+</section>
 
-        <!-- 43 人的职责 -->
-        <section class="slide">
-          <div class="chrome"><span>收束</span><span>人在闭环里做什么</span></div>
-          <div class="main">
-            <div class="cols c-4-8" style="align-items: center">
-              <div class="stack sm">
-                <span class="kicker">四项不可外包的职责</span>
-                <h2 class="h2">人没有离开闭环，<br />只是换了位置。</h2>
-              </div>
-              <ul class="bullets">
-                <li><span>定义什么算对 —— 验收标准只能由人给</span></li>
-                <li><span>供给项目事实 —— 结构、历史、时序、约定</span></li>
-                <li><span>裁决超出代码的决策 —— 约定、命名、影响面</span></li>
-                <li><span>为最终结果负责 —— 断言由谁发出，责任就在谁身上</span></li>
-              </ul>
-            </div>
-          </div>
-          <div class="foot">
-            <span>MetaProject · 团队内部技术分享</span><span>2026.09</span>
-          </div>
-        </section>
+<!-- ========== 41 总结 · 人的职责 ========== -->
+<section class="slide">
+  <div class="kicker">一页纸总结 · 2/2</div>
+  <h2>人在闭环里<span class="acc">不可替代</span>的职责</h2>
+  <div class="grid2">
+    <div class="card acc"><h3>提供带对照组的现象观察</h3><p class="dim">AI 跑不了游戏，做不了 A/B 对照</p></div>
+    <div class="card acc"><h3>给 AI 的结论打置信度折扣</h3><p class="dim">并决定方案的鲁棒等级</p></div>
+    <div class="card acc"><h3>决定外部契约的变更</h3><p class="dim">文件名 · 接口 · 默认值 · 资产路径</p></div>
+    <div class="card acc"><h3>维护暂缓清单</h3><p class="dim">防止上下文被重复噪音消耗</p></div>
+  </div>
+  <div class="stats" style="grid-template-columns:1fr;margin-top:34px">
+    <div class="stat"><div class="n" style="font-size:34px;line-height:1.4">系统性工程 = 把隐性约束<span class="acc">变成 AI 能消费的显性输入</span></div></div>
+  </div>
+</section>
 
-        <!-- 44 收尾 -->
-        <section class="slide cover">
+<!-- ========== 42 收尾 ========== -->
+<section class="slide" style="justify-content:center">
           <span class="kicker">最后一句</span>
           <h2 class="h1">
             系统性工程 =<br />可检索的结构 + 可继承的知识 + 可证伪的验证。
           </h2>
-          <div class="rule"></div>
-          <div class="cols c-7-5" style="align-items: flex-end; margin-top: 10px">
-            <p class="lead">
-              这三样东西 AI 都造不出来，但只要人把它们供上，AI 就能一直待在里面干活。
-            </p>
-            <div class="card">
-              <div class="card-h">材料与出处</div>
-              <div class="card-b">
-                全文：DesignDocument/技术分享_用AI构建系统性工程_v0.1.md<br />
-                规范：AGENTS.md（仓库根目录）<br /><br />
-                §04 掉落物修复尚未通过编译验证。
-              </div>
-            </div>
-          </div>
-        </section>
 
-        <div id="bar"></div>
-        <div id="pager"></div>
-      </div>
-    </div>
-    <div id="help">← → 翻页 · O 概览 · F 全屏</div>
-    <div id="grid"></div>
 
-    <script>
-      (function () {
-        var stage = document.getElementById("stage");
-        var slides = Array.prototype.slice.call(
-          stage.querySelectorAll(".slide"),
-        );
-        var bar = document.getElementById("bar");
-        var pager = document.getElementById("pager");
-        var grid = document.getElementById("grid");
-        var i = 0;
+</section>
 
-        function fit() {
-          var s = Math.min(
-            window.innerWidth / 1280,
-            window.innerHeight / 720,
-          );
-          stage.style.transform = "scale(" + s + ")";
-        }
-        window.addEventListener("resize", fit);
-        fit();
+</div></div>
 
-        function go(n) {
-          if (n < 0 || n >= slides.length) return;
-          slides[i].classList.remove("on");
-          i = n;
-          slides[i].classList.add("on");
-          bar.style.width = ((i + 1) / slides.length) * 100 + "%";
-          pager.textContent =
-            String(i + 1).padStart(2, "0") +
-            " / " +
-            String(slides.length).padStart(2, "0");
-          if (location.hash !== "#" + (i + 1)) {
-            history.replaceState(null, "", "#" + (i + 1));
-          }
-        }
+<div id="bar"></div>
+<div id="hud">1 / 42</div>
+<div id="help">← → 翻页 · ESC 概览 · F 全屏 · Ctrl+P 导 PDF</div>
 
-        /* 概览缩略图 —— 只抓标题，不渲染整页，保证打开瞬间完成 */
-        slides.forEach(function (sl, n) {
-          var t = document.createElement("div");
-          t.className = "thumb";
-          var h = sl.querySelector(".display,.h1,.h2,.h3,.quote-text");
-          t.innerHTML =
-            "<b>" +
-            String(n + 1).padStart(2, "0") +
-            "</b>" +
-            (h ? h.textContent.trim().slice(0, 40) : "");
-          t.onclick = function () {
-            grid.classList.remove("on");
-            go(n);
-          };
-          grid.appendChild(t);
-        });
+<script>
+(function(){
+  var deck=document.getElementById('deck');
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var bar=document.getElementById('bar'), hud=document.getElementById('hud');
+  var i=0, ov=false;
 
-        document.addEventListener("keydown", function (e) {
-          var k = e.key;
-          if (k === "o" || k === "O") {
-            grid.classList.toggle("on");
-            return;
-          }
-          if (k === "Escape") {
-            grid.classList.remove("on");
-            return;
-          }
-          if (k === "f" || k === "F") {
-            if (document.fullscreenElement) document.exitFullscreen();
-            else document.documentElement.requestFullscreen();
-            return;
-          }
-          if (grid.classList.contains("on")) return;
-          if (k === "ArrowRight" || k === "ArrowDown" || k === " ") {
-            e.preventDefault();
-            go(i + 1);
-          }
-          if (k === "ArrowLeft" || k === "ArrowUp") {
-            e.preventDefault();
-            go(i - 1);
-          }
-          if (k === "Home") go(0);
-          if (k === "End") go(slides.length - 1);
-        });
+  function render(){
+    slides.forEach(function(s,n){ s.classList.toggle('active', n===i); });
+    bar.style.width=((i+1)/slides.length*100)+'%';
+    hud.textContent=(i+1)+' / '+slides.length;
+    if(location.hash!=='#'+(i+1)) history.replaceState(null,'','#'+(i+1));
+  }
+  function go(n){ i=Math.max(0,Math.min(slides.length-1,n)); render(); if(ov) scrollTo(); }
+  function scrollTo(){ var el=slides[i]; if(el) el.scrollIntoView({block:'nearest'}); }
 
-        var lock = false;
-        window.addEventListener(
-          "wheel",
-          function (e) {
-            if (lock || grid.classList.contains("on")) return;
-            go(i + (e.deltaY > 0 ? 1 : -1));
-            lock = true;
-            setTimeout(function () {
-              lock = false;
-            }, 420);
-          },
-          { passive: true },
-        );
+  function fit(){
+    if(ov) return;
+    var s=Math.min(window.innerWidth/1280, window.innerHeight/720);
+    deck.style.transform='scale('+s+')';
+  }
+  function toggleOv(){
+    ov=!ov;
+    document.body.classList.toggle('ov',ov);
+    if(ov){ deck.style.transform='none'; } else { fit(); }
+    render();
+  }
 
-        var sx = 0;
-        window.addEventListener(
-          "touchstart",
-          function (e) {
-            sx = e.touches[0].clientX;
-          },
-          { passive: true },
-        );
-        window.addEventListener(
-          "touchend",
-          function (e) {
-            var d = e.changedTouches[0].clientX - sx;
-            if (Math.abs(d) > 40) go(i + (d < 0 ? 1 : -1));
-          },
-          { passive: true },
-        );
+  document.addEventListener('keydown',function(e){
+    if(e.ctrlKey||e.metaKey||e.altKey) return;
+    switch(e.key){
+      case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown':
+        e.preventDefault(); if(ov) toggleOv(); go(i+1); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp':
+        e.preventDefault(); if(ov) toggleOv(); go(i-1); break;
+      case 'Home': e.preventDefault(); go(0); break;
+      case 'End': e.preventDefault(); go(slides.length-1); break;
+      case 'Escape': e.preventDefault(); toggleOv(); break;
+      case 'f': case 'F':
+        e.preventDefault();
+        if(document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen();
+        break;
+    }
+  });
 
-        var start = parseInt((location.hash || "").slice(1), 10);
-        go(start >= 1 && start <= slides.length ? start - 1 : 0);
-      })();
-    </script>
-  </body>
-</html>
+  slides.forEach(function(s,n){
+    s.addEventListener('click',function(){ if(ov){ i=n; toggleOv(); } });
+  });
+
+  window.addEventListener('resize',fit);
+  window.addEventListener('hashchange',function(){
+    var n=parseInt(location.hash.slice(1),10);
+    if(n && n-1!==i) go(n-1);
+  });
+
+  var h=parseInt(location.hash.slice(1),10);
+  if(h) i=Math.max(0,Math.min(slides.length-1,h-1));
+  fit(); render();
+})();
+</script>
+
+
+<!-- 跟随站点的语言选择。
+     博客用 googtrans cookie（path=/，同域）记录读者选的语言，
+     但 iframe / 新标签页是独立 document，不会自动跟随，所以这里自己读一次。
+     没有该 cookie 时（本地演示、内部分享）不加载任何第三方脚本。 -->
+<script>
+(function(){
+  var SUPPORTED=['en','ja'];
+  var target='';
+  try{
+    var m=document.cookie.match('(^|;)\\s*googtrans\\s*=\\s*([^;]+)');
+    if(m) target=decodeURIComponent(m.pop()).split('/')[2]||'';
+  }catch(e){}
+  if(SUPPORTED.indexOf(target)<0) return;
+
+  /* 代码块、C++ 标识符、文件名、页码不参与翻译 */
+  var keep=document.querySelectorAll('pre,code,.mono,#hud,#help');
+  for(var i=0;i<keep.length;i++){
+    keep[i].classList.add('notranslate');
+    keep[i].setAttribute('translate','no');
+  }
+
+  var box=document.createElement('div');
+  box.id='google_translate_element';
+  document.body.appendChild(box);
+
+  window.googleTranslateElementInit=function(){
+    new google.translate.TranslateElement(
+      {pageLanguage:'zh-CN',includedLanguages:SUPPORTED.join(','),autoDisplay:false},
+      'google_translate_element'
+    );
+  };
+  var s=document.createElement('script');
+  s.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  s.async=true;
+  document.body.appendChild(s);
+
+  /* 挂件有时会给 body 加 top 偏移，压掉它 */
+  var fix=setInterval(function(){
+    if(document.body.style.top && document.body.style.top!=='0px'){
+      document.body.style.top='0px';
+    }
+  },300);
+  setTimeout(function(){ clearInterval(fix); },8000);
+})();
+</script>
+
+</body></html>
