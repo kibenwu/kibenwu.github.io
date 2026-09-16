@@ -1,0 +1,840 @@
+---
+title: Portfolio
+layout: default
+description: "作品集 / Portfolio"
+---
+<script>document.body.classList.add('pf-dark-page');</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;800&family=Droid+Serif:ital@0;1&display=swap');
+
+/* ==========================================================================
+   Portfolio 页面样式（黑色主题）
+   1. 所有 #portfolio-page 规则作用域限定在本页，不影响博客其他页面。
+   2. body.pf-dark-page 规则用于覆盖站点外壳（导航 / 页脚）的浅色配色，
+      只在本页生效 —— 由页面顶部的内联脚本添加该 class。
+   ========================================================================== */
+
+#portfolio-page {
+  --pf-bg: #0a0a0a;
+  --pf-bg-alt: #111111;
+  --pf-surface: #181818;
+  --pf-line: rgba(255, 255, 255, 0.10);
+  --pf-text: #f2f2f2;
+  --pf-muted: #9a9a9a;
+  --pf-gold: #fed136;
+  --pf-gold-dark: #fec503;
+  font-family: 'Droid Serif', Georgia, serif;
+  color: var(--pf-text);
+  background-color: var(--pf-bg);
+}
+
+#portfolio-page h1,
+#portfolio-page h2,
+#portfolio-page h3,
+#portfolio-page .pf-btn {
+  font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* ---------- 站点外壳覆盖（仅本页） ---------- */
+
+body.pf-dark-page {
+  background-color: #0a0a0a;
+}
+
+body.pf-dark-page footer .copyright {
+  color: #9a9a9a;
+}
+
+body.pf-dark-page footer .copyright a {
+  color: #9a9a9a;
+}
+
+body.pf-dark-page footer .copyright a:hover,
+body.pf-dark-page footer .copyright a:focus {
+  color: #fed136;
+}
+
+body.pf-dark-page footer .fa-stack-2x {
+  color: #2e2e2e;
+}
+
+@media only screen and (min-width: 768px) {
+  body.pf-dark-page .navbar-custom.is-fixed {
+    background-color: rgba(10, 10, 10, 0.94);
+    border-bottom-color: rgba(255, 255, 255, 0.10);
+  }
+
+  body.pf-dark-page .navbar-custom.is-fixed .navbar-brand,
+  body.pf-dark-page .navbar-custom.is-fixed .nav li a {
+    color: #f2f2f2;
+  }
+
+  body.pf-dark-page .navbar-custom.is-fixed .navbar-brand:hover,
+  body.pf-dark-page .navbar-custom.is-fixed .navbar-brand:focus,
+  body.pf-dark-page .navbar-custom.is-fixed .nav li a:hover,
+  body.pf-dark-page .navbar-custom.is-fixed .nav li a:focus {
+    color: #fed136;
+  }
+}
+
+/* ---------- 首屏 Hero ---------- */
+
+#portfolio-page .pf-hero {
+  position: relative;
+  min-height: 100vh;
+  padding: 110px 20px 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--pf-text);
+  background-color: var(--pf-bg);
+  background-image: linear-gradient(rgba(0, 0, 0, .86), rgba(0, 0, 0, .86)),
+    url('{{ site.baseurl }}/img/home-bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+#portfolio-page .pf-hero__eyebrow {
+  margin: 0 0 14px;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--pf-gold);
+}
+
+#portfolio-page .pf-hero__title {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-hero__sub {
+  margin: 20px 0 0;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 20px;
+  color: var(--pf-muted);
+}
+
+#portfolio-page .pf-hero__actions {
+  margin-top: 42px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+#portfolio-page .pf-btn {
+  display: inline-block;
+  padding: 16px 30px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none !important;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+}
+
+#portfolio-page .pf-btn--primary {
+  background-color: var(--pf-gold);
+  border-color: var(--pf-gold);
+  color: #0a0a0a;
+}
+
+#portfolio-page .pf-btn--primary:hover,
+#portfolio-page .pf-btn--primary:focus {
+  background-color: var(--pf-gold-dark);
+  border-color: var(--pf-gold-dark);
+  color: #0a0a0a;
+}
+
+#portfolio-page .pf-btn--ghost {
+  background-color: transparent;
+  border-color: var(--pf-line);
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-btn--ghost:hover,
+#portfolio-page .pf-btn--ghost:focus {
+  background-color: var(--pf-gold);
+  border-color: var(--pf-gold);
+  color: #0a0a0a;
+}
+
+#portfolio-page .pf-hero__down {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  margin-left: -22px;
+  width: 44px;
+  height: 44px;
+  line-height: 40px;
+  text-align: center;
+  border-radius: 50%;
+  border: 2px solid var(--pf-gold);
+  color: var(--pf-gold);
+  font-size: 22px;
+  text-decoration: none !important;
+  animation: pf-bounce 1.8s infinite;
+}
+
+#portfolio-page .pf-hero__down:hover {
+  background-color: var(--pf-gold);
+  color: #0a0a0a;
+}
+
+@keyframes pf-bounce {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(8px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #portfolio-page .pf-hero__down { animation: none; }
+}
+
+/* ---------- 区块通用 ---------- */
+
+#portfolio-page .pf-section {
+  padding: 90px 0 100px;
+  scroll-margin-top: 80px;
+}
+
+#portfolio-page .pf-section--base { background-color: var(--pf-bg); }
+#portfolio-page .pf-section--alt  { background-color: var(--pf-bg-alt); }
+
+#portfolio-page .pf-head {
+  margin-bottom: 60px;
+  text-align: center;
+}
+
+#portfolio-page .pf-head__title {
+  margin: 0;
+  font-size: 38px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-head__sub {
+  margin: 0;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--pf-muted);
+}
+
+/* 星形分隔线（Agency 的标志性元素） */
+#portfolio-page .pf-star {
+  width: 200px;
+  margin: 22px auto 22px;
+  border: 0;
+  border-top: 2px solid var(--pf-gold);
+  position: relative;
+  text-align: center;
+}
+
+#portfolio-page .pf-star::after {
+  content: "\f005";
+  font-family: FontAwesome;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  margin-left: -12px;
+  padding: 0 10px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--pf-gold);
+  background-color: var(--pf-bg);
+}
+
+#portfolio-page .pf-section--alt .pf-star::after { background-color: var(--pf-bg-alt); }
+
+/* ---------- 作品集网格 ---------- */
+
+#portfolio-page .pf-item { margin-bottom: 30px; }
+
+#portfolio-page .pf-item__link {
+  display: block;
+  text-decoration: none !important;
+  color: inherit;
+}
+
+#portfolio-page .pf-item__thumb {
+  position: relative;
+  height: 230px;
+  overflow: hidden;
+  border-radius: 4px;
+  border: 1px solid var(--pf-line);
+  background-size: cover;
+  background-position: center;
+}
+
+/* 占位背景：换成真实截图时把下面每条的 background-image 改成 url('...') */
+#portfolio-page .pf-item__thumb--1 { background-image: linear-gradient(135deg, #23232f, #131318); }
+#portfolio-page .pf-item__thumb--2 { background-image: linear-gradient(135deg, #2f2622, #1a1512); }
+#portfolio-page .pf-item__thumb--3 { background-image: linear-gradient(135deg, #1a2f2f, #101d1d); }
+#portfolio-page .pf-item__thumb--4 { background-image: linear-gradient(135deg, #2a2133, #18131f); }
+#portfolio-page .pf-item__thumb--5 { background-image: linear-gradient(135deg, #222b3a, #141a22); }
+#portfolio-page .pf-item__thumb--6 { background-image: linear-gradient(135deg, #33262f, #1e161c); }
+
+/* 缩略图上的分类水印 */
+#portfolio-page .pf-item__cat {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, .62);
+  transition: opacity .3s ease;
+}
+
+/* hover：金色蒙层 + 加号 */
+#portfolio-page .pf-item__thumb::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(254, 209, 54, .92);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+
+#portfolio-page .pf-item__thumb::after {
+  content: "\f067";
+  font-family: FontAwesome;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 34px;
+  color: #0a0a0a;
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+
+#portfolio-page .pf-item__link:hover .pf-item__thumb::before,
+#portfolio-page .pf-item__link:hover .pf-item__thumb::after,
+#portfolio-page .pf-item__link:focus .pf-item__thumb::before,
+#portfolio-page .pf-item__link:focus .pf-item__thumb::after {
+  opacity: 1;
+}
+
+#portfolio-page .pf-item__link:hover .pf-item__cat { opacity: 0; }
+
+#portfolio-page .pf-item__caption { padding: 18px 4px 0; text-align: center; }
+
+#portfolio-page .pf-item__title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-item__meta {
+  margin: 8px 0 0;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--pf-muted);
+}
+
+/* ---------- 联系区 ---------- */
+
+#portfolio-page .pf-contact { text-align: center; }
+
+#portfolio-page .pf-contact__lead {
+  margin: 0 0 30px;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--pf-muted);
+}
+
+#portfolio-page .pf-mail {
+  display: inline-block;
+  margin-bottom: 40px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--pf-gold);
+  text-decoration: none !important;
+  border-bottom: 2px solid transparent;
+  transition: border-color .25s ease;
+}
+
+#portfolio-page .pf-mail:hover { border-bottom-color: var(--pf-gold); }
+
+#portfolio-page .pf-social {
+  margin: 0;
+  padding: 0;
+}
+
+#portfolio-page .pf-social > li { margin: 0 6px 12px; }
+
+#portfolio-page .pf-social a {
+  display: inline-block;
+  padding: 12px 20px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--pf-text) !important;
+  border: 2px solid var(--pf-line);
+  border-radius: 4px;
+  text-decoration: none !important;
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+}
+
+#portfolio-page .pf-social a:hover,
+#portfolio-page .pf-social a:focus {
+  background-color: var(--pf-gold);
+  border-color: var(--pf-gold);
+  color: #0a0a0a !important;
+}
+
+#portfolio-page .pf-social i { margin-right: 8px; }
+
+/* ---------- 作品详情弹窗 ---------- */
+
+#portfolio-page .pf-modal .modal-content {
+  border: 1px solid var(--pf-line);
+  border-radius: 0;
+  background-color: var(--pf-surface);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .6);
+}
+
+#portfolio-page .pf-modal .modal-body {
+  padding: 50px 40px 40px;
+  text-align: center;
+}
+
+#portfolio-page .pf-modal .modal-body h3 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-modal .pf-star::after { background-color: var(--pf-surface); }
+
+#portfolio-page .pf-modal .pf-modal__thumb {
+  height: 220px;
+  margin-bottom: 26px;
+  border-radius: 4px;
+  border: 1px solid var(--pf-line);
+  background-size: cover;
+  background-position: center;
+}
+
+#portfolio-page .pf-modal .modal-body p {
+  margin: 0 auto 26px;
+  max-width: 620px;
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--pf-muted);
+}
+
+#portfolio-page .pf-modal .item-details {
+  margin: 0 0 30px;
+  padding: 0;
+  list-style: none;
+}
+
+#portfolio-page .pf-modal .item-details > li {
+  display: inline-block;
+  margin: 0 14px 8px;
+  font-family: 'Droid Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 15px;
+  color: var(--pf-muted);
+}
+
+#portfolio-page .pf-modal .item-details strong {
+  font-family: 'Montserrat', sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-modal .pf-modal__close {
+  padding: 14px 26px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background-color: transparent;
+  border: 2px solid var(--pf-line);
+  border-radius: 4px;
+  color: var(--pf-text);
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+}
+
+#portfolio-page .pf-modal .pf-modal__close:hover,
+#portfolio-page .pf-modal .pf-modal__close:focus {
+  background-color: var(--pf-gold);
+  border-color: var(--pf-gold);
+  color: #0a0a0a;
+}
+
+/* 右上角 X 关闭按钮（Agency 的标志性元素） */
+#portfolio-page .pf-modal .close-modal {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 60px;
+  height: 60px;
+  z-index: 2;
+  cursor: pointer;
+  transition: opacity .25s ease;
+}
+
+#portfolio-page .pf-modal .close-modal:hover { opacity: .35; }
+
+#portfolio-page .pf-modal .close-modal .lr {
+  height: 60px;
+  width: 2px;
+  margin-left: 29px;
+  background-color: var(--pf-gold);
+  transform: rotate(45deg);
+  z-index: 1051;
+}
+
+#portfolio-page .pf-modal .close-modal .lr .rl {
+  height: 60px;
+  width: 2px;
+  background-color: var(--pf-gold);
+  transform: rotate(90deg);
+  z-index: 1052;
+}
+
+/* ---------- 小屏适配 ---------- */
+
+@media (max-width: 767px) {
+  #portfolio-page .pf-hero { min-height: 82vh; padding: 96px 16px 80px; }
+  #portfolio-page .pf-hero__title { font-size: 32px; }
+  #portfolio-page .pf-hero__sub { font-size: 17px; }
+  #portfolio-page .pf-section { padding: 64px 0 72px; }
+  #portfolio-page .pf-head { margin-bottom: 40px; }
+  #portfolio-page .pf-head__title { font-size: 28px; }
+  #portfolio-page .pf-mail { font-size: 17px; }
+  #portfolio-page .pf-modal .modal-body { padding: 56px 20px 30px; }
+  #portfolio-page .pf-modal .modal-body h3 { font-size: 23px; }
+}
+</style>
+
+
+<div id="portfolio-page">
+
+  <!-- 首屏 -->
+  <header class="pf-hero">
+    <p class="pf-hero__eyebrow">Portfolio</p>
+    <h1 class="pf-hero__title">{{ site.title }}</h1>
+    <p class="pf-hero__sub">技术美术 &amp; 独立游戏开发</p>
+
+    <div class="pf-hero__actions">
+      <a class="pf-btn pf-btn--primary js-pf-scroll" href="#pf-work">查看作品</a>
+      <a class="pf-btn pf-btn--ghost js-pf-scroll" href="#pf-contact">联系我</a>
+    </div>
+
+    <a class="pf-hero__down js-pf-scroll" href="#pf-work" aria-label="向下滚动">
+      <i class="fa fa-angle-down"></i>
+    </a>
+  </header>
+
+  <!-- 作品集 -->
+  <section class="pf-section pf-section--base" id="pf-work">
+    <div class="container">
+
+      <div class="pf-head">
+        <h2 class="pf-head__title">作品集</h2>
+        <hr class="pf-star" />
+        <p class="pf-head__sub">Steam 独立游戏 · UE5 技术美术 · 工具链</p>
+      </div>
+
+      <div class="row">
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-1" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--1">
+              <span class="pf-item__cat">独立游戏</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">Seaquest Dungeon</h3>
+              <p class="pf-item__meta">Steam 上线 · 2024</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-2" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--2">
+              <span class="pf-item__cat">独立游戏</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">GridFiller</h3>
+              <p class="pf-item__meta">Steam 上线 · 2025</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-3" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--3">
+              <span class="pf-item__cat">技术美术</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">UE5 GAS 战斗系统扩展</h3>
+              <p class="pf-item__meta">系统设计 · 2026</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-4" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--4">
+              <span class="pf-item__cat">工具链</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">Houdini PCG 工具链</h3>
+              <p class="pf-item__meta">程序化生成 · 2025</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-5" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--5">
+              <span class="pf-item__cat">动画技术</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">Motion Matching 动画系统</h3>
+              <p class="pf-item__meta">UE5 / Pose Search · 2026</p>
+            </div>
+          </a>
+        </div>
+
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-6" data-toggle="modal">
+            <div class="pf-item__thumb pf-item__thumb--6">
+              <span class="pf-item__cat">技术研究</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">Godot 静态光照实验</h3>
+              <p class="pf-item__meta">光照烘焙 · 2025</p>
+            </div>
+          </a>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 联系 -->
+  <section class="pf-section pf-section--alt" id="pf-contact">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 pf-contact">
+
+          <div class="pf-head">
+            <h2 class="pf-head__title">联系我</h2>
+            <hr class="pf-star" />
+            <p class="pf-head__sub">合作、外包、技术交流都欢迎</p>
+          </div>
+
+          <p class="pf-contact__lead">直接发邮件最快，社交平台也都在。</p>
+
+          <a class="pf-mail" href="mailto:{{ site.email }}">{{ site.email }}</a>
+
+          <ul class="pf-social list-inline">
+            {% if site.github_username %}
+            <li>
+              <a href="https://github.com/{{ site.github_username }}" target="_blank" rel="noopener">
+                <i class="fa fa-github"></i>GitHub
+              </a>
+            </li>
+            {% endif %}
+            {% if site.twitter_username %}
+            <li>
+              <a href="https://twitter.com/{{ site.twitter_username }}" target="_blank" rel="noopener">
+                <i class="fa fa-twitter"></i>Twitter
+              </a>
+            </li>
+            {% endif %}
+            {% if site.youtube_username %}
+            <li>
+              <a href="https://www.youtube.com/@{{ site.youtube_username }}" target="_blank" rel="noopener">
+                <i class="fa fa-youtube-play"></i>YouTube
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 作品详情弹窗 -->
+  <div class="modal fade pf-modal" id="pf-modal-1" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>Seaquest Dungeon</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--1"></div>
+          <p>自研地牢探索 RPG。负责核心玩法系统、战斗手感调校与整体美术管线，已上线 Steam。</p>
+          <ul class="item-details">
+            <li>类型：<strong>独立游戏</strong></li>
+            <li>角色：<strong>主程 / 技术美术</strong></li>
+            <li>年份：<strong>2024</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade pf-modal" id="pf-modal-2" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>GridFiller</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--2"></div>
+          <p>网格填充解谜。负责核心玩法实现、界面交互与配套工具链，已上线 Steam。</p>
+          <ul class="item-details">
+            <li>类型：<strong>独立游戏</strong></li>
+            <li>角色：<strong>主程</strong></li>
+            <li>年份：<strong>2025</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade pf-modal" id="pf-modal-3" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>UE5 GAS 战斗系统扩展</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--3"></div>
+          <p>在 GameplayAbilitySystem 之上扩展 POE 风格的伤害模型与状态交互，包含属性聚合、状态堆叠与结算时序的完整设计。</p>
+          <ul class="item-details">
+            <li>类型：<strong>技术美术</strong></li>
+            <li>技术：<strong>UE5 / GAS</strong></li>
+            <li>年份：<strong>2026</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade pf-modal" id="pf-modal-4" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>Houdini PCG 工具链</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--4"></div>
+          <p>程序化场景生成与资产批处理管线，配套整理了一份 1800+ 行的 VEX 函数库笔记。</p>
+          <ul class="item-details">
+            <li>类型：<strong>工具链</strong></li>
+            <li>技术：<strong>Houdini / VEX</strong></li>
+            <li>年份：<strong>2025</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade pf-modal" id="pf-modal-5" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>Motion Matching 动画系统</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--5"></div>
+          <p>基于 GASP 5.8 拆解 Motion Matching 全流程，并实现双角色交互（MMI）的最小可行验证与自定义扩展。</p>
+          <ul class="item-details">
+            <li>类型：<strong>动画技术</strong></li>
+            <li>技术：<strong>UE5 / Pose Search</strong></li>
+            <li>年份：<strong>2026</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade pf-modal" id="pf-modal-6" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
+        <div class="modal-body">
+          <h3>Godot 静态光照实验</h3>
+          <hr class="pf-star" />
+          <div class="pf-modal__thumb pf-item__thumb--6"></div>
+          <p>LightmapGI 烘焙流程与场景打光实践，对比实时全局光照在成本与效果上的取舍。</p>
+          <ul class="item-details">
+            <li>类型：<strong>技术研究</strong></li>
+            <li>技术：<strong>Godot 4 / LightmapGI</strong></li>
+            <li>年份：<strong>2025</strong></li>
+          </ul>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // 平滑滚动：只作用于带 .js-pf-scroll 的锚点，
+  // 避免拦截弹窗触发链接（它们也带 href="#pf-modal-*"）
+  document.addEventListener('DOMContentLoaded', function () {
+    var links = document.querySelectorAll('#portfolio-page a.js-pf-scroll');
+    Array.prototype.forEach.call(links, function (link) {
+      link.addEventListener('click', function (e) {
+        var id = link.getAttribute('href');
+        if (!id || id.charAt(0) !== '#') return;
+        var target = document.querySelector(id);
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+  });
+})();
+</script>
