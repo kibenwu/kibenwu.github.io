@@ -1,0 +1,474 @@
+/* ==========================================================================
+   全站深色主题 · 纯黑金（方案 A）
+   --------------------------------------------------------------------------
+   加载位置：_includes/head.html，紧接 css/hux-blog.min.css 之后。
+   本文件只覆盖颜色，不动布局 / 字号 / 间距 / 字体。
+   回滚方式：删掉 head.html 里引用本文件的那一行即可，其余文件未改动。
+
+   色板
+     页面底色  #0a0a0a      卡片 / 代码外框  #141414
+     浮层      #181818      标题            #f5f5f5
+     正文      #c8c8c8      次要文字        #8a8a8a
+     分隔线    #242424      强调 / 链接     #fed136（hover #fec503）
+
+   注意：css/hux-blog.css 是 less 编译产物且未被 head 加载（head 只加载
+   .min.css），因此不要去改它；改动一律写在这里。
+   ========================================================================== */
+
+:root {
+  /* 声明深色配色，让浏览器把原生控件也渲染成深色：
+     滚动条、<select> 弹出的下拉列表、以及没有显式设背景的表单控件。
+     否则这些位置会出现 UA 默认的白底（例如搜索框）。 */
+  color-scheme: dark;
+
+  --dk-bg: #0a0a0a;
+  --dk-surface: #141414;
+  --dk-overlay: #181818;
+  --dk-heading: #f5f5f5;
+  --dk-text: #c8c8c8;
+  --dk-muted: #8a8a8a;
+  --dk-line: #242424;
+  --dk-line-soft: rgba(255, 255, 255, 0.10);
+  --dk-accent: #fed136;
+  --dk-accent-hover: #fec503;
+}
+
+/* --------------------------------------------------------------------------
+   1. 基础表面与文字
+   body 原本没有 background-color，靠 Bootstrap 的 #fff，必须显式覆盖。
+   -------------------------------------------------------------------------- */
+html,
+body {
+  background-color: var(--dk-bg);
+}
+
+body {
+  color: var(--dk-text);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--dk-heading);
+}
+
+a {
+  color: var(--dk-text);
+}
+
+a:hover,
+a:focus {
+  color: var(--dk-accent);
+}
+
+blockquote {
+  color: var(--dk-muted);
+  /* Bootstrap 默认 border-left: 5px solid #eee，在深底上是一条刺眼亮线 */
+  border-left-color: var(--dk-accent);
+}
+
+hr {
+  border-color: var(--dk-line);
+}
+
+hr.small {
+  border-color: var(--dk-accent);
+}
+
+::selection {
+  color: var(--dk-bg);
+  background: var(--dk-accent);
+}
+
+::-moz-selection {
+  color: var(--dk-bg);
+  background: var(--dk-accent);
+}
+
+/* --------------------------------------------------------------------------
+   2. 正文容器 .post-container
+   -------------------------------------------------------------------------- */
+.post-container a {
+  color: var(--dk-accent);
+}
+
+.post-container a:hover,
+.post-container a:focus {
+  color: var(--dk-accent-hover);
+}
+
+/* 原为 gray，比正文浅一档的次级标题 */
+.post-container h4,
+.post-container h5,
+.post-container h6 {
+  color: #d8d8d8;
+}
+
+.post-container h2::before {
+  border-bottom-color: var(--dk-line);
+}
+
+.post-container .pager li > a > span {
+  color: var(--dk-muted);
+}
+
+/* 代码块本身是 One Dark（#282c34），在深色页上无需改色，
+   只补一圈描边把它和页面底分开。 */
+.highlight {
+  border: 1px solid var(--dk-line-soft);
+}
+
+/* 行内代码：Bootstrap 默认是 #c7254e on #f9f2f4（深红字 + 浅粉底），
+   在 #0a0a0a 上是一块刺眼的亮斑。改成与代码块同一套配色。 */
+code {
+  color: #abb2bf;
+  background-color: #282c34;
+}
+
+/* 块级代码里的 <code> 不要重复叠背景/颜色，让 .highlight 自己那层生效 */
+pre code,
+.highlight code {
+  background-color: transparent;
+  color: inherit;
+}
+
+/* --------------------------------------------------------------------------
+   3. 文章列表 .post-preview / 首页与归档
+   -------------------------------------------------------------------------- */
+.post-preview > a {
+  color: var(--dk-heading);
+}
+
+.post-preview > a:hover,
+.post-preview > a:focus {
+  color: var(--dk-accent);
+}
+
+.post-preview > .post-meta {
+  color: var(--dk-muted);
+}
+
+.post-preview > .post-meta > a {
+  color: var(--dk-muted);
+}
+
+.post-preview > .post-meta > a:hover,
+.post-preview > .post-meta > a:focus {
+  color: var(--dk-accent);
+}
+
+.post-content-preview {
+  color: var(--dk-muted);
+}
+
+.post-content-preview:hover {
+  color: var(--dk-accent);
+}
+
+/* --------------------------------------------------------------------------
+   4. 侧栏 .sidebar-container（about / 文章页共用）
+   -------------------------------------------------------------------------- */
+.sidebar-container {
+  color: var(--dk-muted);
+}
+
+.sidebar-container h5 {
+  color: var(--dk-heading);
+}
+
+.sidebar-container h5 a {
+  color: var(--dk-heading) !important;
+}
+
+.sidebar-container a {
+  color: var(--dk-muted) !important;
+}
+
+.sidebar-container a:hover,
+.sidebar-container a:active {
+  color: var(--dk-accent) !important;
+}
+
+.sidebar-container .tags a {
+  border-color: #3a3a3a;
+}
+
+.sidebar-container .tags a:hover,
+.sidebar-container .tags a:active {
+  border-color: var(--dk-accent);
+}
+
+/* 文章目录高亮项 */
+.side-catalog .catalog-body .active {
+  background-color: #1f1f1f;
+}
+
+.side-catalog .catalog-body .active a {
+  color: var(--dk-accent) !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. 导航
+   默认态压在题图上（白字，深色页保留）；is-fixed 态原本是白底深字，必改。
+   -------------------------------------------------------------------------- */
+.navbar-custom.invert .navbar-toggle .icon-bar {
+  background-color: var(--dk-heading);
+}
+
+.navbar-custom.invert .navbar-brand {
+  color: var(--dk-heading);
+}
+
+.navbar-custom.invert .navbar-brand:hover,
+.navbar-custom.invert .navbar-brand:focus {
+  color: var(--dk-accent);
+}
+
+.navbar-custom.invert .nav li a {
+  color: var(--dk-heading);
+}
+
+.navbar-custom.invert .nav li a:hover,
+.navbar-custom.invert .nav li a:focus {
+  color: var(--dk-accent);
+}
+
+@media only screen and (min-width: 768px) {
+  .navbar-custom.is-fixed {
+    background-color: rgba(10, 10, 10, 0.94);
+    border-bottom-color: var(--dk-line);
+  }
+
+  .navbar-custom.is-fixed .navbar-brand {
+    color: var(--dk-heading);
+  }
+
+  .navbar-custom.is-fixed .navbar-brand:hover,
+  .navbar-custom.is-fixed .navbar-brand:focus {
+    color: var(--dk-accent);
+  }
+
+  .navbar-custom.is-fixed .nav li a {
+    color: var(--dk-heading);
+  }
+
+  .navbar-custom.is-fixed .nav li a:hover,
+  .navbar-custom.is-fixed .nav li a:focus {
+    color: var(--dk-accent);
+  }
+}
+
+/* 移动端展开的折叠菜单原本是白底 */
+@media only screen and (max-width: 767px) {
+  .navbar-default .navbar-collapse {
+    background: var(--dk-surface);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   6. 全屏搜索遮罩（站级组件，原本 background:#fff）
+   -------------------------------------------------------------------------- */
+.search-page {
+  background: var(--dk-bg);
+}
+
+.search-page #search-input {
+  color: var(--dk-heading);
+  /* <input> 没有显式背景时会用 UA 默认的白色，这里让它透出遮罩的深色底 */
+  background-color: transparent;
+}
+
+.search-page #search-input::placeholder {
+  color: #5f5f5f;
+}
+
+.search-icon a,
+.search-icon-close {
+  color: var(--dk-text);
+}
+
+/* --------------------------------------------------------------------------
+   7. 分页 / 表单 / 表格（原本写死 white 或 #ddd）
+   -------------------------------------------------------------------------- */
+.pager li > a,
+.pager li > span {
+  background-color: var(--dk-surface);
+  border-color: var(--dk-line);
+  color: var(--dk-text);
+}
+
+.pager li > a:hover,
+.pager li > a:focus {
+  background-color: #1f1f1f;
+  border-color: #3a3a3a;
+  color: var(--dk-heading);
+}
+
+/* 禁用态分页原本是 #a3a3a3 on #404040（在深色主题里反而成了亮块） */
+.pager .disabled > a,
+.pager .disabled > a:hover,
+.pager .disabled > a:focus,
+.pager .disabled > span {
+  color: #5f5f5f;
+  background-color: var(--dk-surface);
+  border-color: var(--dk-line);
+  cursor: not-allowed;
+}
+
+select {
+  color: var(--dk-accent);
+  border-color: var(--dk-line);
+  background: var(--dk-surface);
+}
+
+table.table > tbody th,
+table.table > thead th,
+table.table > tbody td,
+table.table > thead td {
+  border-color: var(--dk-line) !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. 标签云（archive / videos，原本 background:#f3f5f5）
+   注：标签自身的文字色由 js/jquery.tagcloud.js 以行内样式写入
+   （#bbbbee → #2f93b4），在深底上对比度约 5:1，可读，故不强行覆盖。
+   -------------------------------------------------------------------------- */
+#tag_cloud a,
+#tag_cloud .tag {
+  background: #1a1a1a;
+  color: var(--dk-text);
+}
+
+#tag_cloud a:hover,
+#tag_cloud .tag:hover,
+#tag_cloud a:active,
+#tag_cloud .tag:active,
+#tag_cloud a.focus,
+#tag_cloud .tag.focus {
+  background-color: var(--dk-accent) !important;
+  color: var(--dk-bg) !important;
+}
+
+#tag_cloud a.tag-button--all,
+#tag_cloud .tag.tag-button--all {
+  color: var(--dk-accent) !important;
+}
+
+#tag_cloud a.tag-button--all:hover,
+#tag_cloud .tag.tag-button--all:hover,
+#tag_cloud a.tag-button--all:active,
+#tag_cloud .tag.tag-button--all:active,
+#tag_cloud a.tag-button--all.focus,
+#tag_cloud .tag.tag-button--all.focus {
+  background-color: #1f1f1f !important;
+}
+
+.listing-seperator {
+  color: var(--dk-accent);
+}
+
+/* --------------------------------------------------------------------------
+   9. 页脚
+   footer 本身没有背景色，浅色时靠 body 的白；显式给深色，避免任何继承意外。
+   -------------------------------------------------------------------------- */
+footer {
+  background-color: var(--dk-bg);
+}
+
+/* 页脚版权行是 <p class="copyright text-muted">，
+   Bootstrap 的 .text-muted 是 #777，在 #0a0a0a 上对比度约 4.4:1，压不到 AA，提到 #8a8a8a。 */
+.text-muted {
+  color: var(--dk-muted);
+}
+
+footer .copyright a {
+  color: var(--dk-muted);
+}
+
+footer .copyright a:hover,
+footer .copyright a:focus {
+  color: var(--dk-accent);
+}
+
+/* --------------------------------------------------------------------------
+   10. 无题图页面的兜底底色（原本 #a3a3a3 灰）
+   -------------------------------------------------------------------------- */
+.intro-header {
+  background-color: var(--dk-surface);
+}
+
+/* 文章页头部：本站 11 篇文章全部用 header-style: text，
+   而 .intro-header.style-text .post-heading（3 个 class）比
+   .intro-header .post-heading（2 个 class）优先级高，
+   于是标题下的「Posted by …」和标签仍是 #404040 —— 在 #0a0a0a 上对比度仅 1.91。
+   标题本身不受影响（h1/h2 有各自规则）。 */
+.intro-header.style-text .post-heading {
+  color: var(--dk-muted);
+}
+
+.intro-header.style-text .tags a,
+.intro-header.style-text .tags .tag {
+  color: var(--dk-text);
+  border-color: #3a3a3a;
+}
+
+.intro-header.style-text .tags a:hover,
+.intro-header.style-text .tags .tag:hover,
+.intro-header.style-text .tags a:active,
+.intro-header.style-text .tags .tag:active {
+  color: var(--dk-heading);
+  border-color: #4a4a4a;
+  background-color: rgba(255, 255, 255, 0.10);
+}
+
+/* --------------------------------------------------------------------------
+   11. img.shadow 原本是黑色投影，深底上看不见，改为描边表达"强调"
+   -------------------------------------------------------------------------- */
+img.shadow {
+  box-shadow: none;
+  border: 1px solid var(--dk-line-soft);
+}
+
+/* --------------------------------------------------------------------------
+   12. 多语言切换条（_includes/auto-translate.html 的 .lang-bar）
+   它的 <style> 在 body 内、晚于本文件加载，故用 body 前缀提高优先级，
+   不改动该 include 自身。
+   -------------------------------------------------------------------------- */
+body .lang-bar .lang-bar-label {
+  color: var(--dk-muted);
+}
+
+body .lang-bar a {
+  color: var(--dk-accent);
+  border-color: #3a3a3a;
+  background: var(--dk-surface);
+}
+
+body .lang-bar a:hover,
+body .lang-bar a.active {
+  color: var(--dk-bg);
+  background: var(--dk-accent);
+  border-color: var(--dk-accent);
+}
+
+body .lang-bar .lang-bar-hint {
+  color: var(--dk-muted);
+}
+
+/* --------------------------------------------------------------------------
+   13. 离线提示条 .paper-snackbar
+   hux-blog.css:142 原本是 background:#0085a1 + color:#fff + 动作键 #ffeb3b，
+   是浅色主题里的青色提示条，换成深色面 + 金色动作键。
+   -------------------------------------------------------------------------- */
+.paper-snackbar {
+  background-color: var(--dk-overlay);
+  color: var(--dk-heading);
+  border: 1px solid #2e2e2e;
+}
+
+.paper-snackbar .action {
+  color: var(--dk-accent);
+}

@@ -96,7 +96,10 @@
     async('{{ "/js/jquery.tagcloud.js" | prepend: site.baseurl }}', function () {
         $.fn.tagcloud.defaults = {
             //size: {start: 1, end: 1, unit: 'em'},
-            color: { start: '#bbbbee', end: '#2f93b4' },
+            // 插件把这对颜色写进 background-color（见 js/jquery.tagcloud.js:26-28），
+            // 原值 #bbbbee→#2f93b4 是浅色主题的，深色下灰字压蓝底对比度仅 2.11。
+            // 换成深色梯度后：#2b2b2b 上 8.03:1，#5c4a12 上 5.03:1。
+            color: { start: '#2b2b2b', end: '#5c4a12' },
         };
         $('#tag_cloud a').tagcloud();
     })
