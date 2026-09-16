@@ -24,6 +24,11 @@ youtube_username: kiven7Wu
 highlighter: rouge
 permalink: pretty
 paginate: 10
+# 文章列表已从 / 移到 /blog/。jekyll-paginate 是**按目录**匹配分页模板的
+# （见 jekyll-paginate 的 Pager.pagination_candidate?：它要求 page 所在目录
+# 等于 paginate_path 所在目录，且文件名必须是 index.html）。
+# 所以这里必须同步改成 /blog/page:num/，否则列表渲染为空、/blog/page2/ 404。
+paginate_path: "/blog/page:num/"
 exclude:
   [
     "less",

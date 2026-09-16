@@ -23,6 +23,14 @@
                         <li>
                             <a href="{{ site.baseurl }}/">Home</a>
                         </li>
+                        <!-- 文章列表已移到 /blog/，这里写死而不是靠下面的 site.pages 循环：
+                             jekyll-paginate 会把生成的 /blog/page2/ 这类分页页也追加进
+                             site.pages，且它们继承 blog/index.html 的 front matter（含 title），
+                             用循环会多渲染一个指向 /blog/page2/ 的 "Blog" 项。
+                             blog/index.html 因此设为 hide-in-nav: true，由这里提供入口。 -->
+                        <li>
+                            <a href="{{ site.baseurl }}/blog/">Blog</a>
+                        </li>
                         {% for page in site.pages %}
                         {% if page.title and page.hide-in-nav != true %}
                         <li>
