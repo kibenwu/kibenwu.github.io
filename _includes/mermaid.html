@@ -8,6 +8,9 @@
     所以 .md 文件本身不需要为深色主题改动。
   - 色表只做「hex → hex」替换，因此 flowchart 的 classDef、
     xychart / pie / quadrant 的 themeVariables 一次全覆盖。
+  - 示意图定位：图只是正文描述的辅助，不承担强调。所以渲染前
+    剥掉图源里的 <b> / <strong>（全部按常规字重排），字号比正文小一档。
+    图源里的原句一字不改，只改字重与字号。
 -->
 
 <style>
@@ -19,6 +22,17 @@
 .mermaid-figure svg {
   max-width: 100%;
   height: auto;
+}
+/* 示意图不用粗体：mermaid 自己会给 cluster 标题、边标签等加字重 */
+.mermaid-figure svg text,
+.mermaid-figure svg tspan,
+.mermaid-figure .nodeLabel,
+.mermaid-figure .edgeLabel,
+.mermaid-figure .cluster-label,
+.mermaid-figure foreignObject div,
+.mermaid-figure foreignObject span,
+.mermaid-figure foreignObject p {
+  font-weight: 400 !important;
 }
 </style>
 
@@ -66,6 +80,14 @@
     });
   }
 
+  /* 示意图只做示意：不加粗，字号比正文小一档。原句不动。 */
+  function toPlain(src) {
+    return src
+      .replace(/<\/?(?:b|strong)>/gi, '')
+      .replace(/"fontSize":"14px"/g, '"fontSize":"12px"')
+      .replace(/"pieTitleTextSize":"17px"/g, '"pieTitleTextSize":"14px"');
+  }
+
   function sourceOf(box) {
     var codeCell = box.querySelector('td.code pre');
     var node = codeCell || box.querySelector('code') || box;
@@ -81,7 +103,7 @@
     var target = box.tagName === 'CODE' ? box.parentNode : box;
     var fig = document.createElement('div');
     fig.className = 'mermaid-figure notranslate';
-    fig.textContent = toDark(sourceOf(box));
+    fig.textContent = toPlain(toDark(sourceOf(box)));
     target.parentNode.replaceChild(fig, target);
     figures.push(fig);
   });
