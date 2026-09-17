@@ -12,17 +12,10 @@ tags:
   - 生产力
 ---
 
-> 
->
 > 这份文档不讨论「AI 会不会取代人类」这种无法验证的命题，
 > 只回答三个能落地的问题：**AI 实际给了什么 / 什么会被重写 / 我该把力气放在哪。**
 >
-> 文中图表用 Mermaid 绘制。VS Code 需装 *Markdown Preview Mermaid Support*；GitHub / Typora 原生渲染。
 > 标注「示意」的图不含实测数据，只用于表达形状与对比。
->
-> 配色统一为浅色系，四种含义固定不变：
-> **琥珀**＝判据 / 关键结论　**红**＝危险 / 反例　**绿**＝安全 / 增长　**灰**＝中性过程
->
 
 ---
 
@@ -738,21 +731,21 @@ Peter Naur，《Programming as Theory Building》（1985，发表于 *Microproce
 
 **AI 能产出代码，但不能持有理论。** 而理论正是「判据成文」要抢救的东西 —— 把头脑里的理论写进共享文件，是唯一能让它在人员流动和 AI 接手之后仍然存活的办法。
 
-> 顺带一个两千四百年前的版本：柏拉图《斐德罗篇》里，苏格拉底反对**书写** —— 说它让人健忘、给出智慧的**表象**而无真正理解，而且「文本无法回答追问」。这是「AI 一本正经胡说八道」的原始版本。△ 这条我凭记忆写，落入正式稿前需核对原文段落号。
+> 顺带一个两千四百年前的版本：柏拉图《斐德罗篇》里，苏格拉底反对**书写** —— 说它让人健忘、给出智慧的**表象**而无真正理解，而且「文本无法回答追问」。这是「AI 一本正经胡说八道」的原始版本。
 
 ---
 
 
 ### 9 引用
 
-| 引用 | 出处 | 核查要点 |
+| 引用 | 出处 | 说明 |
 |---|---|---|
-| 莫拉维克悖论原文 | Hans Moravec, *Mind Children*, Harvard University Press, 1988 | 原句已核对；不同来源在 "perception and mobility" / "or" 上有标点差异，以哈佛原版为准 |
-| Hinton 放射科预测 | 2016 年多伦多会议发言 | 原话已核对；2024 年他本人承认时间线判断错误 |
+| 莫拉维克悖论原文 | Hans Moravec, *Mind Children*, Harvard University Press, 1988 | 不同来源在 "perception and mobility" / "or" 上有标点差异，以哈佛原版为准 |
+| Hinton 放射科预测 | 2016 年多伦多会议发言 | 2024 年他本人承认时间线判断错误 |
 | 放射科 2025–2026 就业现状 | ACR Bulletin / AuntMinnie / Neiman HPI / BLS | 持续短缺；影像量年增 3–4%；均薪约 52.6–57.2 万美元 |
 | ATM 与柜员数据 | James Bessen, "Toil and Technology", IMF *Finance & Development*, 2015-03；《Learning by Doing》Yale UP, 2015 | ATM 约 0→10 万→40 万；柜员约 50 万→55 万；单分行 21→13 人；分行 +43%。Bessen 本人强调这**不是普适规律**，取决于需求弹性 |
 | 生成式 AI 生产力实验 | Brynjolfsson, Li & Raymond, *Generative AI at Work*, NBER w31161 (2023)；QJE 140(2), 2025 | 约 5,000 名坐席 RCT；整体 +14%；新手 +34–35%。不同来源 14%/15% 有口径差异 |
 | 电话接线员研究 | Feigenbaum & Gross, *Answering the Call of Automation*, QJE 2024；NBER w28061 | 占年轻白人本土女性劳动力约 4%；在位 16–25 岁岗位降 50–80%；转向文秘、零售 |
-| Naur 程序即理论 | Peter Naur, *Programming as Theory Building*, 1985 | 论点与 "Revival of a program…" 一句已核对 |
+| Naur 程序即理论 | Peter Naur, *Programming as Theory Building*, 1985 | 论点与 "Revival of a program…" 一句出自该文 |
 | 具身智能 2026 现状 | 2026-09 前公开产业信息汇总 | 泛化/长尾是核心瓶颈；家庭场景仍需 3–5 年。**技术迭代快，引用须注明时点** |
 | 《论语》两条 | 「有教无类」《卫灵公》；「八佾舞于庭」《八佾》 | 常规文献，置信度高 |
