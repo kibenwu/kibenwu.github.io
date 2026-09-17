@@ -3,7 +3,11 @@
   行为：
   - 把 kramdown/rouge 产出的 ```mermaid 代码块转成图
   - 兼容 rouge 的行号 table 布局（取 td.code pre 的纯文本）
-  - 每张图自带 %%{init}%% 浅色主题指令，这里不覆盖主题
+  - 图源里写的是浅色系（为了 GitHub / 编辑器预览好看），
+    渲染前按下面的色表整体换成本站深色版（css/custom.css 纯黑金），
+    所以 .md 文件本身不需要为深色主题改动。
+  - 色表只做「hex → hex」替换，因此 flowchart 的 classDef、
+    xychart / pie / quadrant 的 themeVariables 一次全覆盖。
 -->
 
 <style>
@@ -21,6 +25,47 @@
 <script type="module">
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
 
+  /* 浅色图源 → 站内深色。语义不变：琥珀＝判据 / 红＝危险 / 绿＝安全 / 灰＝中性 */
+  var DARK = {
+    /* 中性面与线 */
+    '#ffffff': '#0a0a0a',   /* 画布底 / pie 扇形描边 */
+    '#fafaf8': '#101010',   /* cluster 底 */
+    '#fbfbf9': '#121212',   /* gap 填充 / secondary / tertiary */
+    '#f7f7f4': '#121212',   /* quadrant-3 底 */
+    '#f4f4f1': '#1a1a1a',   /* base 填充 / primaryColor */
+    '#e6e6e0': '#242424',   /* pie3 */
+    '#d4d4cc': '#2f2f2f',   /* cluster 边 */
+    '#c9c9c1': '#3a3a3a',   /* gap 边 / 刻度 */
+    '#a8a8a0': '#4a4a4a',   /* base 边 / 轴线 */
+    '#b0b0a8': '#5a5a5a',   /* 连线 */
+    '#55554f': '#8a8a8a',   /* 轴标签 / 图例 */
+    '#77776f': '#8a8a8a',   /* gap 文字 */
+    '#33332f': '#c8c8c8',   /* 正文 */
+    /* 琥珀 · 判据 / 关键结论 */
+    '#fdf6d9': '#2a2410',
+    '#b8952a': '#fed136',
+    '#c9a227': '#fed136',
+    '#5f4a06': '#ffe6a0',
+    /* 红 · 危险 / 反例 */
+    '#fdeeea': '#2a1512',
+    '#f0d6cd': '#3a1d18',
+    '#d9522f': '#e0664a',
+    '#8f2c12': '#ffb3a0',
+    /* 绿 · 安全 / 增长 */
+    '#ecfaf0': '#12251b',
+    '#eff7f2': '#12251b',
+    '#2f9c66': '#4fbf82',
+    '#14603c': '#a8e8c2'
+  };
+
+  var DARK_RE = new RegExp(Object.keys(DARK).join('|'), 'gi');
+
+  function toDark(src) {
+    return src.replace(DARK_RE, function (hex) {
+      return DARK[hex.toLowerCase()] || hex;
+    });
+  }
+
   function sourceOf(box) {
     var codeCell = box.querySelector('td.code pre');
     var node = codeCell || box.querySelector('code') || box;
@@ -36,7 +81,7 @@
     var target = box.tagName === 'CODE' ? box.parentNode : box;
     var fig = document.createElement('div');
     fig.className = 'mermaid-figure notranslate';
-    fig.textContent = sourceOf(box);
+    fig.textContent = toDark(sourceOf(box));
     target.parentNode.replaceChild(fig, target);
     figures.push(fig);
   });
