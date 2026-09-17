@@ -5,6 +5,7 @@ subtitle: 从平权史看个人的位置：AI 给了什么、什么会被重写�
 author: KivenWu
 header-style: text
 mermaid: true
+figi18n: true
 tags:
   - AI
   - 技术思考

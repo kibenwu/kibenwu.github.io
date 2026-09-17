@@ -94,6 +94,80 @@
     return node.textContent.replace(/\s+$/, '');
   }
 
+  /* ------------------------------------------------------------------
+     图内文案的多语言：Google 挂件不碰 SVG 文本，而且译文变长会撑破
+     mermaid 算好的框，所以这里在**渲染前**换掉图源，让 mermaid 按译文
+     重新测量排版。词表：js/fig-i18n/<slug>.js，缺条目回落中文。
+     ------------------------------------------------------------------ */
+  var SLUG = '{{ page.slug }}';
+  var HAS_DICT = {% if page.figi18n %}true{% else %}false{% endif %};
+  var LANGS = { en: 0, ja: 1 };
+
+  function currentLang() {
+    var m = document.cookie.match('(^|;)\\s*googtrans\\s*=\\s*([^;]+)');
+    if (!m) return null;
+    var parts = decodeURIComponent(m.pop()).split('/');
+    var lang = parts[parts.length - 1];
+    return lang in LANGS ? lang : null;
+  }
+
+  function loadDict(slug) {
+    return new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = '{{ site.baseurl }}/js/fig-i18n/' + slug + '.js';
+      s.onload = function () { resolve((window.FIG_I18N || {})[slug] || null); };
+      s.onerror = function () { resolve(null); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function makeTranslator(dict, lang) {
+    var idx = LANGS[lang];
+    function tr(s) {
+      var hit = dict[s.trim()];
+      return hit && hit[idx] ? hit[idx] : s;
+    }
+    /* 只有命中词表的文本才会被换掉，没命中的一律原样留下 */
+    return function (src) {
+      return src.split('\n').map(function (line) {
+        if (line.indexOf('%%{init') >= 0) return line;
+
+        /* 1. 带引号的标签："..." */
+        var out = line.replace(/"([^"]*)"/g, function (m, s) {
+          return s ? '"' + tr(s) + '"' : m;
+        });
+
+        /* 2. 不带引号的节点标签：[...] (...) {...} ([...]) ((...)) */
+        out = out.replace(
+          /([\[\(\{]+)([^\[\]\(\){}"|]*[\u4e00-\u9fff][^\[\]\(\){}"|]*)([\]\)\}]+)/g,
+          function (m, open, text, close) { return open + tr(text) + close; }
+        );
+
+        /* 3. 边上的文字：-.文字.-> / --文字--> / ==文字==> / |文字| */
+        out = out
+          .replace(/-\.([^.>|"]*[\u4e00-\u9fff][^.>|"]*)\.->/g, function (m, s) { return '-.' + tr(s) + '.->'; })
+          .replace(/--([^->|"]*[\u4e00-\u9fff][^->|"]*)-->/g, function (m, s) { return '--' + tr(s) + '-->'; })
+          .replace(/==([^=>|"]*[\u4e00-\u9fff][^=>|"]*)==>/g, function (m, s) { return '==' + tr(s) + '==>'; })
+          .replace(/\|([^|"]*[\u4e00-\u9fff][^|"]*)\|/g, function (m, s) { return '|' + tr(s) + '|'; });
+
+        /* 4. title / section 行（不加引号的写法） */
+        var m = out.match(/^(\s*)(title|section)\s+(.+)$/);
+        if (m && m[3].indexOf('"') < 0) return m[1] + m[2] + ' ' + tr(m[3]);
+
+        /* 5. timeline 的事件行：年份 : 事件 : 事件 */
+        if (out.indexOf('"') < 0 && out.indexOf(':') > 0 && /[\u4e00-\u9fff]/.test(out)) {
+          var indent = out.match(/^\s*/)[0];
+          return indent + out.trim().split(':').map(function (seg) { return tr(seg); }).join(' : ');
+        }
+        return out;
+      }).join('\n');
+    };
+  }
+
+  var lang = currentLang();
+  var dict = lang && HAS_DICT ? await loadDict(SLUG) : null;
+  var toLang = dict ? makeTranslator(dict, lang) : function (s) { return s; };
+
   var boxes = document.querySelectorAll(
     '.post-container div.language-mermaid, .post-container pre > code.language-mermaid'
   );
@@ -103,7 +177,7 @@
     var target = box.tagName === 'CODE' ? box.parentNode : box;
     var fig = document.createElement('div');
     fig.className = 'mermaid-figure notranslate';
-    fig.textContent = toPlain(toDark(sourceOf(box)));
+    fig.textContent = toPlain(toDark(toLang(sourceOf(box))));
     target.parentNode.replaceChild(fig, target);
     figures.push(fig);
   });
