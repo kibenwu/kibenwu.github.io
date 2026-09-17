@@ -443,9 +443,9 @@ flowchart LR
 
 | 形式 | 例子 | 能否逐张验 | 能否交给 AI |
 |---|---|---|---|
-| **风格描述** | 「暗黑写实」「压抑但不脏」 | ❌ 十个人十个理解 | ❌ |
-| **参考集** | 一组标杆图 | ⚠️ 能对齐大方向，细节靠猜 | ⚠️ |
-| **否决清单** | 「不出现纯饱和色」「剪影不对称」「感染相关必偏黄绿」「人形怪不加成套装甲」 | ✅ | ✅ |
+| **风格描述** | 「暗黑写实」「压抑但不脏」 | ✗ 十个人十个理解 | ✗ |
+| **参考集** | 一组标杆图 | △ 能对齐大方向，细节靠猜 | △ |
+| **否决清单** | 「不出现纯饱和色」「剪影不对称」「感染相关必偏黄绿」「人形怪不加成套装甲」 | ✓ | ✓ |
 
 不做这一步，AI 生成十张你会挑得很痛苦，而且**挑不稳** —— 因为你在用感觉当判据，而感觉不可复现，今天挑 A 明天挑 B。
 
@@ -454,9 +454,9 @@ flowchart LR
 ```mermaid
 %%{init:{"theme":"base","themeVariables":{"background":"#ffffff","primaryColor":"#f4f4f1","primaryBorderColor":"#a8a8a0","primaryTextColor":"#33332f","secondaryColor":"#fbfbf9","tertiaryColor":"#fbfbf9","lineColor":"#b0b0a8","textColor":"#33332f","edgeLabelBackground":"#ffffff","clusterBkg":"#fafaf8","clusterBorder":"#d4d4cc","fontFamily":"-apple-system,Segoe UI,Microsoft YaHei,sans-serif","fontSize":"14px"}}}%%
 flowchart TB
-    A["<b>风格描述</b><br/>「暗黑写实」「压抑但不脏」"] --> A2["❌ 十个人十个理解<br/>❌ AI 完全接不住"]
-    B["<b>参考集</b><br/>一组标杆图"] --> B2["⚠️ 能对齐大方向<br/>⚠️ 细节靠猜"]
-    C["<b>否决清单</b><br/>「不出现纯饱和色」「感染必偏黄绿」"] --> C2["✅ 可逐张验<br/>✅ 可直接交给 AI"]
+    A["<b>风格描述</b><br/>「暗黑写实」「压抑但不脏」"] --> A2["✗ 十个人十个理解<br/>✗ AI 完全接不住"]
+    B["<b>参考集</b><br/>一组标杆图"] --> B2["△ 能对齐大方向<br/>△ 细节靠猜"]
+    C["<b>否决清单</b><br/>「不出现纯饱和色」「感染必偏黄绿」"] --> C2["✓ 可逐张验<br/>✓ 可直接交给 AI"]
     A2 --> Z["用感觉当判据 → 感觉不可复现<br/><b>今天挑 A，明天挑 B</b>"]
     C2 --> Y["把这一轮的不确定性<br/><b>转化成下一轮的确定性</b>"]
 

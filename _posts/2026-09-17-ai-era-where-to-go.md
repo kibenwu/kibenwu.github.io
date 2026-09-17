@@ -125,16 +125,16 @@ flowchart LR
 flowchart TB
     subgraph BEFORE["平权之前"]
         direction TB
-        G1["🚪 <b>门卫</b><br/>出版社 / 编辑部 / 编译器<br/><i>要许可才能进</i>"]
-        T1["🧱 <b>门槛</b><br/>会不会写"]
+        G1["<b>门卫</b><br/>出版社 / 编辑部 / 编译器<br/><i>要许可才能进</i>"]
+        T1["<b>门槛</b><br/>会不会写"]
         O1["少数人进得来<br/>而且他们确实会写"]
         G1 --> T1 --> O1
     end
 
     subgraph AFTER["平权之后"]
         direction TB
-        G2["❌ <b>门卫已拆</b><br/>不经许可即可产出"]
-        T2["🧱 <b>门槛 · 一动没动</b><br/>会不会写"]
+        G2["✗ <b>门卫已拆</b><br/>不经许可即可产出"]
+        T2["<b>门槛 · 一动没动</b><br/>会不会写"]
         O2["所有人都进来了<br/><b>但会写的人没变多</b>"]
         G2 --> T2 --> O2
     end
@@ -292,16 +292,16 @@ Bessen 本人强调这不是普适规律。*
 %%{init:{"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"-apple-system,Segoe UI,Microsoft YaHei,sans-serif","fontSize":"14px","quadrant1Fill":"#fdf6d9","quadrant2Fill":"#fdeeea","quadrant3Fill":"#f7f7f4","quadrant4Fill":"#eff7f2","quadrant1TextFill":"#5f4a06","quadrant2TextFill":"#8f2c12","quadrant3TextFill":"#77776f","quadrant4TextFill":"#14603c","quadrantPointFill":"#33332f","quadrantPointTextFill":"#33332f","quadrantXAxisTextFill":"#55554f","quadrantYAxisTextFill":"#55554f","quadrantTitleFill":"#33332f","quadrantInternalBorderStrokeFill":"#c9c9c1","quadrantExternalBorderStrokeFill":"#a8a8a0"}}}%%
 quadrantChart
     title 四个案例 · 工种存续 × 产业总量
-    x-axis 工种被删除 --> 工种被重写
-    y-axis 产业总量萎缩 --> 产业总量增长
-    quadrant-1 重写 · 总量增
-    quadrant-2 删除 · 总量增
-    quadrant-3 删除 · 总量减
-    quadrant-4 重写 · 总量减
-    手工织工: [0.12, 0.88]
-    铅字排字工: [0.15, 0.55]
-    电话接线员: [0.10, 0.30]
-    ATM 与柜员: [0.80, 0.62]
+    x-axis "工种被删除" --> "工种被重写"
+    y-axis "产业总量萎缩" --> "产业总量增长"
+    quadrant-1 "重写 · 总量增"
+    quadrant-2 "删除 · 总量增"
+    quadrant-3 "删除 · 总量减"
+    quadrant-4 "重写 · 总量减"
+    "手工织工": [0.12, 0.88]
+    "铅字排字工": [0.15, 0.55]
+    "电话接线员": [0.10, 0.30]
+    "ATM 与柜员": [0.80, 0.62]
 ```
 
 *所以「历史证明技术不会造成失业」这句话，**对宏观成立，对具体工种完全不成立**。*
@@ -384,7 +384,7 @@ flowchart LR
 
 ### 4.2 悖论在职场上的两个投射
 
-| | 🩺 放射科读片 | 🧸 护工 / 养老看护 |
+| | 放射科读片 | 护工 / 养老看护 |
 |---|---|---|
 | **薪资** | 高（美国 2025 年均约 52.6–57.2 万美元） | 低（传统视角下门槛低、被归为低技能） |
 | **为什么高/低薪** | 需要长期医学训练、培养成本高 | 不要求高学历 |
@@ -399,17 +399,17 @@ flowchart LR
 %%{init:{"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"-apple-system,Segoe UI,Microsoft YaHei,sans-serif","fontSize":"14px","quadrant1Fill":"#fdf6d9","quadrant2Fill":"#fdeeea","quadrant3Fill":"#f7f7f4","quadrant4Fill":"#eff7f2","quadrant1TextFill":"#5f4a06","quadrant2TextFill":"#8f2c12","quadrant3TextFill":"#77776f","quadrant4TextFill":"#14603c","quadrantPointFill":"#33332f","quadrantPointTextFill":"#33332f","quadrantXAxisTextFill":"#55554f","quadrantYAxisTextFill":"#55554f","quadrantTitleFill":"#33332f","quadrantInternalBorderStrokeFill":"#c9c9c1","quadrantExternalBorderStrokeFill":"#a8a8a0"}}}%%
 quadrantChart
     title 薪资 与 自动化难度 是两条独立的轴
-    x-axis 易自动化 --> 难自动化
-    y-axis 低薪 --> 高薪
-    quadrant-1 高薪 · 难自动化
-    quadrant-2 高薪 · 易自动化
-    quadrant-3 低薪 · 易自动化
-    quadrant-4 低薪 · 难自动化
-    放射科读片: [0.18, 0.90]
-    护工与养老看护: [0.86, 0.16]
-    规格化翻译: [0.10, 0.42]
-    初级前端: [0.15, 0.50]
-    外科手术: [0.78, 0.92]
+    x-axis "易自动化" --> "难自动化"
+    y-axis "低薪" --> "高薪"
+    quadrant-1 "高薪 · 难自动化"
+    quadrant-2 "高薪 · 易自动化"
+    quadrant-3 "低薪 · 易自动化"
+    quadrant-4 "低薪 · 难自动化"
+    "放射科读片": [0.18, 0.90]
+    "护工与养老看护": [0.86, 0.16]
+    "规格化翻译": [0.10, 0.42]
+    "初级前端": [0.15, 0.50]
+    "外科手术": [0.78, 0.92]
 ```
 
 *直觉会把「高薪」和「难自动化」当成同一条轴 —— 于是左上角（高薪 · 易自动化）这一格在直觉里不存在。
@@ -459,18 +459,18 @@ timeline
 %%{init:{"theme":"base","themeVariables":{"background":"#ffffff","fontFamily":"-apple-system,Segoe UI,Microsoft YaHei,sans-serif","fontSize":"14px","quadrant1Fill":"#fdf6d9","quadrant2Fill":"#fdeeea","quadrant3Fill":"#f7f7f4","quadrant4Fill":"#eff7f2","quadrant1TextFill":"#5f4a06","quadrant2TextFill":"#8f2c12","quadrant3TextFill":"#77776f","quadrant4TextFill":"#14603c","quadrantPointFill":"#33332f","quadrantPointTextFill":"#33332f","quadrantXAxisTextFill":"#55554f","quadrantYAxisTextFill":"#55554f","quadrantTitleFill":"#33332f","quadrantInternalBorderStrokeFill":"#c9c9c1","quadrantExternalBorderStrokeFill":"#a8a8a0"}}}%%
 quadrantChart
     title 可规格化程度 × 后果能否转移
-    x-axis 难规格化 · AI 做不了 --> 易规格化 · AI 能做
-    y-axis 责任可转移 --> 责任不可转移 · 必须人签字
-    quadrant-1 被重写
-    quadrant-2 最安全
-    quadrant-3 暂时安全
-    quadrant-4 被删除
-    放射科读片: [0.85, 0.90]
-    铅字排字工: [0.88, 0.12]
-    电话接线员: [0.82, 0.10]
-    护工与养老看护: [0.15, 0.80]
-    初级前端: [0.80, 0.25]
-    架构判据与技术选型: [0.30, 0.92]
+    x-axis "难规格化 · AI 做不了" --> "易规格化 · AI 能做"
+    y-axis "责任可转移" --> "责任不可转移 · 必须人签字"
+    quadrant-1 "被重写"
+    quadrant-2 "最安全"
+    quadrant-3 "暂时安全"
+    quadrant-4 "被删除"
+    "放射科读片": [0.85, 0.90]
+    "铅字排字工": [0.88, 0.12]
+    "电话接线员": [0.82, 0.10]
+    "护工与养老看护": [0.15, 0.80]
+    "初级前端": [0.80, 0.25]
+    "架构判据与技术选型": [0.30, 0.92]
 ```
 
 ***Hinton 只算了横轴，没算纵轴。** 放射科的可规格化程度他没判断错 —— 但「签字的人必须是人」，
@@ -738,7 +738,7 @@ Peter Naur，《Programming as Theory Building》（1985，发表于 *Microproce
 
 **AI 能产出代码，但不能持有理论。** 而理论正是「判据成文」要抢救的东西 —— 把头脑里的理论写进共享文件，是唯一能让它在人员流动和 AI 接手之后仍然存活的办法。
 
-> 顺带一个两千四百年前的版本：柏拉图《斐德罗篇》里，苏格拉底反对**书写** —— 说它让人健忘、给出智慧的**表象**而无真正理解，而且「文本无法回答追问」。这是「AI 一本正经胡说八道」的原始版本。⚠️ 这条我凭记忆写，落入正式稿前需核对原文段落号。
+> 顺带一个两千四百年前的版本：柏拉图《斐德罗篇》里，苏格拉底反对**书写** —— 说它让人健忘、给出智慧的**表象**而无真正理解，而且「文本无法回答追问」。这是「AI 一本正经胡说八道」的原始版本。△ 这条我凭记忆写，落入正式稿前需核对原文段落号。
 
 ---
 
