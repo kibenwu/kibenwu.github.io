@@ -1,0 +1,48 @@
+<!-- Mermaid rendering (opt-in via front matter: mermaid: true) -->
+<!--
+  行为：
+  - 把 kramdown/rouge 产出的 ```mermaid 代码块转成图
+  - 兼容 rouge 的行号 table 布局（取 td.code pre 的纯文本）
+  - 每张图自带 %%{init}%% 浅色主题指令，这里不覆盖主题
+-->
+
+<style>
+.mermaid-figure {
+  margin: 1.6rem 0;
+  text-align: center;
+  overflow-x: auto;
+}
+.mermaid-figure svg {
+  max-width: 100%;
+  height: auto;
+}
+</style>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+  function sourceOf(box) {
+    var codeCell = box.querySelector('td.code pre');
+    var node = codeCell || box.querySelector('code') || box;
+    return node.textContent.replace(/\s+$/, '');
+  }
+
+  var boxes = document.querySelectorAll(
+    '.post-container div.language-mermaid, .post-container pre > code.language-mermaid'
+  );
+
+  var figures = [];
+  boxes.forEach(function (box) {
+    var target = box.tagName === 'CODE' ? box.parentNode : box;
+    var fig = document.createElement('div');
+    fig.className = 'mermaid-figure notranslate';
+    fig.textContent = sourceOf(box);
+    target.parentNode.replaceChild(fig, target);
+    figures.push(fig);
+  });
+
+  if (figures.length) {
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+    await mermaid.run({ nodes: figures });
+  }
+</script>
