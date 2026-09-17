@@ -5,6 +5,7 @@ subtitle: 一句意图怎么长成一个玩法循环，以及 AI 在这条链上
 author: KivenWu
 header-style: text
 mermaid: true
+figi18n: true
 tags:
   - AI
   - 游戏设计

@@ -5,6 +5,7 @@ subtitle: 瓶颈不是生成能力，是约束供给：结构 / 知识 / 验证�
 author: KivenWu
 header-style: text
 mermaid: true
+figi18n: true
 tags:
   - AI
   - UE5

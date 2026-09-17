@@ -5,6 +5,7 @@ subtitle: AI 时代美术在游戏开发里扮演什么角色：判据如何变�
 author: KivenWu
 header-style: text
 mermaid: true
+figi18n: true
 tags:
   - AI
   - 美术
