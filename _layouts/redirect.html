@@ -1,0 +1,28 @@
+---
+layout: null
+---
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: 'zh-CN' }}">
+<head>
+<meta charset="utf-8">
+<!-- 这一篇的正文就是幻灯片本身：列表点进来直接进 deck，不经过文章页。
+     content 仍然保留（供列表摘要 / 搜索 / RSS 使用），只是不渲染成页面。 -->
+<title>{{ page.title }}</title>
+<link rel="canonical" href="{{ page.redirect_to | prepend: site.baseurl | prepend: site.url }}">
+<meta http-equiv="refresh" content="0; url={{ page.redirect_to | prepend: site.baseurl }}">
+<meta name="robots" content="noindex">
+<style>
+html,body{margin:0;height:100%;background:#0b0f17;color:#9fb0c7;
+  font-family:"Microsoft YaHei","微软雅黑",system-ui,sans-serif}
+.box{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+a{color:#f5a524}
+</style>
+<script>location.replace({{ page.redirect_to | prepend: site.baseurl | jsonify }});</script>
+</head>
+<body>
+<div class="box">
+  <p>正在打开幻灯片…</p>
+  <p><a href="{{ page.redirect_to | prepend: site.baseurl }}">{{ page.title }}</a></p>
+</div>
+</body>
+</html>

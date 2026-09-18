@@ -1,0 +1,1601 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>设计维度 · 从意图到闭环</title>
+<style>
+/* ============================================================
+   固定舞台：1280×720 等比缩放
+   所有内容按 1280×720 写死，靠 fit() 整体 scale，
+   这样任何屏幕上版式都不会重排（改字号不会引发连锁位移）。
+   ============================================================ */
+:root{
+  --bg:#0b0f17;
+  --fg:#e8edf5;
+  --dim:#9fb0c7;
+  --dim2:#7c8ca3;
+  --line:#1e2a3d;
+  --acc:#f5a524;      /* 琥珀 = 强调 */
+  --acc2:#2dd4bf;     /* 青 = 次强调 / 正面 */
+  --bad:#f87171;
+  --good:#4ade80;
+  --code:#0d1420;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%;background:#05070b;overflow:hidden}
+body{font-family:"Microsoft YaHei","微软雅黑",system-ui,sans-serif;color:var(--fg)}
+
+#stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#deck{width:1280px;height:720px;transform-origin:center;position:relative;background:var(--bg);
+      box-shadow:0 0 0 1px #1a2434,0 30px 80px rgba(0,0,0,.6)}
+
+.slide{position:absolute;inset:0;display:none;flex-direction:column;padding:52px 76px 62px;
+       background:
+         radial-gradient(1000px 420px at 88% -8%,rgba(245,165,36,.10),transparent 60%),
+         radial-gradient(760px 380px at -6% 106%,rgba(45,212,191,.08),transparent 60%);}
+.slide.active{display:flex}
+
+/* ---------- 排版 ---------- */
+h1{font-size:60px;line-height:1.14;margin:0 0 22px;font-weight:800;letter-spacing:-.5px}
+h2{font-size:38px;line-height:1.22;margin:0 0 26px;font-weight:750;letter-spacing:-.2px}
+h3{font-size:25px;line-height:1.3;margin:0 0 14px;font-weight:700;color:var(--acc)}
+p{font-size:20px;line-height:1.72;margin:0 0 14px;color:var(--dim)}
+.lead{font-size:24px;line-height:1.68;color:var(--fg)}
+.acc{color:var(--acc)}
+.acc2{color:var(--acc2)}
+.bad{color:var(--bad)}
+.good{color:var(--good)}
+.dim{color:var(--dim2)}
+.big{font-size:44px;line-height:1.28;font-weight:750}
+.kicker{font-size:15px;letter-spacing:3px;color:var(--acc);text-transform:uppercase;margin:0 0 16px;font-weight:700}
+.mono{font-family:"JetBrains Mono","Cascadia Code",Consolas,monospace}
+.body{flex:1;min-height:0;display:flex;flex-direction:column}
+.center{justify-content:center}
+ul{margin:0 0 14px;padding-left:24px}
+li{font-size:20px;line-height:1.7;color:var(--dim);margin-bottom:9px}
+li strong{color:var(--fg);font-weight:700}
+li::marker{color:var(--acc)}
+
+/* ---------- 引用块 ---------- */
+blockquote{margin:0 0 16px;padding:16px 22px;border-left:3px solid var(--acc);
+           background:rgba(245,165,36,.06);border-radius:0 8px 8px 0}
+blockquote p{margin:0;font-size:19px;line-height:1.66;color:var(--fg)}
+blockquote .src{display:block;margin-top:9px;font-size:15px;color:var(--dim2)}
+blockquote.q2{border-left-color:var(--acc2);background:rgba(45,212,191,.06)}
+blockquote.warn{border-left-color:var(--bad);background:rgba(248,113,113,.07)}
+
+/* ---------- 代码 / 结构块 ---------- */
+pre{margin:0 0 14px;padding:16px 20px;background:var(--code);border:1px solid var(--line);
+    border-radius:10px;font-family:"JetBrains Mono","Cascadia Code",Consolas,monospace;
+    font-size:17.5px;line-height:1.62;color:#cfe0f5;overflow:hidden;white-space:pre-wrap}
+pre.sm{font-size:15.5px;line-height:1.6}
+.c{color:#5d7290}
+.k{color:#f5a524}
+.t{color:#2dd4bf}
+.hl{color:#ffd580;font-weight:700}
+.s{color:#9ae6b4}
+
+/* ---------- 表格 ---------- */
+table{width:100%;border-collapse:collapse;margin:0 0 14px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line);
+      font-size:18px;line-height:1.5;vertical-align:top}
+th{color:var(--acc);font-weight:700;font-size:16px;letter-spacing:.4px;
+   border-bottom:1px solid #2b3b52;white-space:nowrap}
+td{color:var(--dim)}
+td strong{color:var(--fg)}
+table.sm th,table.sm td{font-size:16px;padding:8px 12px}
+table.xs th,table.xs td{font-size:14.5px;padding:6px 10px;line-height:1.45}
+
+/* ---------- 图 ---------- */
+figure{margin:0;min-width:0}
+.shot{display:block;max-width:100%;border:1px solid var(--line);border-radius:10px;
+      background:var(--code);cursor:zoom-in}
+.figcap{font-size:14.5px;color:var(--dim2);margin-top:9px;line-height:1.5}
+/* 整页大图 */
+.s-fig .body{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0}
+.s-fig .shot{max-height:498px;width:auto;object-fit:contain}
+/* 图文分栏 */
+.split{display:grid;gap:26px;align-items:center;flex:1;min-height:0}
+.split.f75{grid-template-columns:7fr 5fr}
+.split.f57{grid-template-columns:5fr 7fr}
+.split.f11{grid-template-columns:1fr 1fr}
+.split .shot{width:100%;max-height:430px;object-fit:contain}
+.split .col{min-width:0}
+/* 图组 */
+.figgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px 22px;flex:1;min-height:0;align-content:center}
+.figgrid .shot{width:100%;max-height:176px;object-fit:contain}
+
+/* ---------- 视频（详见文件末尾的模板注释） ---------- */
+.s-vid .body{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:0}
+video.clip{display:block;max-width:100%;max-height:500px;width:auto;
+           border:1px solid var(--line);border-radius:10px;background:#000;outline:none}
+.split video.clip{width:100%;max-height:430px}
+
+/* ---------- 两列 / 卡片 ---------- */
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;flex:1;min-height:0;align-content:start}
+.cols3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;flex:1;min-height:0;align-content:start}
+.card{border:1px solid var(--line);border-radius:12px;padding:18px 20px;background:rgba(255,255,255,.02)}
+.card h3{font-size:21px;margin-bottom:10px}
+.card p,.card li{font-size:17px;line-height:1.6;margin-bottom:8px}
+.card.k2 h3{color:var(--acc2)}
+.card.kb h3{color:var(--bad)}
+
+/* ---------- 章节过渡页 ---------- */
+.s-sec{align-items:flex-start;justify-content:center}
+.s-sec .num{font-size:96px;font-weight:800;color:var(--acc);line-height:1;margin-bottom:18px;opacity:.9}
+.s-sec h1{font-size:56px;margin-bottom:18px}
+.s-sec p{font-size:23px;max-width:900px}
+
+/* ---------- 封面 ---------- */
+.s-cover{justify-content:center}
+.s-cover h1{font-size:76px;margin-bottom:26px}
+.s-cover .sub{font-size:26px;color:var(--dim);line-height:1.6}
+.s-cover .meta{margin-top:38px;font-size:17px;color:var(--dim2);line-height:1.9}
+
+/* ---------- 页脚装饰 ---------- */
+#bar{position:fixed;left:0;bottom:0;height:3px;background:linear-gradient(90deg,var(--acc),var(--acc2));
+     width:0;z-index:20;transition:width .18s ease}
+#hud{position:fixed;right:16px;bottom:12px;font-size:13px;color:#5d7290;z-index:20;
+     font-family:"JetBrains Mono",Consolas,monospace;letter-spacing:1px}
+#help{position:fixed;left:16px;bottom:12px;font-size:12.5px;color:#43536b;z-index:20;
+      font-family:"JetBrains Mono",Consolas,monospace}
+
+/* ---------- 概览网格（ESC） ---------- */
+body.ov #deck{transform:none!important;width:100%;height:100%;box-shadow:none;background:#05070b;
+              overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:22px;align-content:start}
+body.ov .slide{position:relative;inset:auto;display:flex!important;width:296px;height:166.5px;
+               transform:scale(.222);transform-origin:0 0;border:1px solid #1e2a3d;border-radius:4px;cursor:pointer;
+               flex:none}
+body.ov .ovwrap{width:296px;height:166.5px;overflow:hidden}
+body.ov #bar,body.ov #hud{display:none}
+
+/* ---------- 灯箱：原图像素查看 ---------- */
+#lb{position:fixed;inset:0;z-index:100;display:none;background:rgba(4,7,12,.95);overflow:hidden;cursor:grab}
+#lb.on{display:block}
+#lb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none}
+#lbinfo{position:fixed;left:0;right:0;bottom:0;padding:12px 18px;background:rgba(4,7,12,.86);
+        font-size:14px;color:var(--dim);z-index:101;display:none;line-height:1.5}
+#lb.on ~ #lbinfo{display:block}
+
+@page{size:1280px 720px;margin:0}
+@media print{
+  html,body{overflow:visible;background:#fff}
+  #stage{position:static;display:block}
+  #deck{transform:none!important;box-shadow:none}
+  .slide{display:flex!important;page-break-after:always;position:relative;inset:auto;width:1280px;height:720px}
+  #bar,#hud,#help{display:none}
+}
+
+/* ---------- 翻译挂件抑制 ---------- */
+/* 挂件顶栏会把固定舞台整体推下去，演示页不能被推 */
+#google_translate_element,
+.goog-te-banner-frame,
+.goog-te-gadget-icon,
+iframe.skiptranslate,
+.goog-tooltip,
+.goog-tooltip:hover{display:none!important}
+body{top:0!important}
+.goog-text-highlight{background:none!important;box-shadow:none!important}
+/* 译文比中文占更多横向空间，整体缩一档，避免撑破 1280×720 */
+html.translated-ltr .slide,
+html.translated-rtl .slide{zoom:.9}
+</style>
+</head>
+<body>
+
+<div id="stage">
+<div id="deck">
+
+<!-- ========================= 1 封面 ========================= -->
+<section class="slide s-cover">
+  <p class="kicker">用 AI 构建系统性工程 · 第一维度</p>
+  <h1>设计维度<br><span class="acc">从意图到闭环</span></h1>
+  <p class="sub">一句意图怎么长成一个玩法闭环 —— 以及这套方法里<br>AI 能干什么、不能干什么，非策划为什么必须懂。</p>
+  <p class="meta">MetaProject · 生化搜打撤 Demo · 两个月开发实录<br>
+     素材：19 张设计图 + 12 篇设计文档</p>
+</section>
+
+<!-- ========================= 2 路线图 ========================= -->
+<section class="slide">
+  <h2>本章要回答的<span class="acc">十个问题</span></h2>
+  <div class="body">
+    <div class="cols">
+      <div>
+        <pre class="sm"><span class="c">// 从零到一个循环</span>
+<span class="k">1</span> 起点是什么？        <span class="t">意图，一切的根源</span>
+<span class="k">2</span> 怎么长成循环？      <span class="t">核心变量 + 扇形展开</span>
+<span class="k">3</span> 什么叫闭环？        <span class="t">争夺边判定</span>
+<span class="k">4</span> 取舍怎么设计出来？  <span class="t">多义性 × 容量</span>
+<span class="k">5</span> 钩子挂在哪？        <span class="t">已拥有之物</span></pre>
+      </div>
+      <div>
+        <pre class="sm"><span class="c">// 从循环到判断</span>
+<span class="k">6</span> 规则怎么代替内容？  <span class="t">组合成本</span>
+<span class="k">7</span> 规则设计的目的？    <span class="t">有意义的决策</span>
+<span class="k">8</span> 什么叫有趣？        <span class="t">四条可判定</span>
+<span class="k">9</span> AI 的边界在哪？     <span class="t">会展开不会减法</span>
+<span class="hl">10 非策划为什么要懂？ 决策权</span></pre>
+      </div>
+    </div>
+    <blockquote><p>本章不讲「怎么做搜打撤」，讲<strong>从一句意图长出一个闭环的方法</strong>。</p></blockquote>
+  </div>
+</section>
+
+<!-- ========================= 3 §1 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">1</div>
+  <h1>意图是<span class="acc">一切的根源</span></h1>
+  <p>明确意图，才有方向。<br>所有设计决定，最终都在回答同一个问题：<span class="acc2">我要的体验是什么。</span></p>
+</section>
+
+<!-- ========================= 4 图01 Demo 意图 ========================= -->
+<section class="slide">
+  <h2>Demo 意图是<span class="acc">双列</span>的</h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145733.png"
+           data-cap="图 01 · Demo 意图：左列体验目标，右列工程目标" alt="Demo 意图">
+    </figure>
+    <div class="col">
+      <h3>右列不是玩法需求，是工程需求</h3>
+      <p>一个 Demo 的意图里同时写进<strong>「我要验证什么体验」</strong>和<strong>「我要验证什么协作方式」</strong>。</p>
+      <p>这是这个项目没有做成「一堆能跑的功能」的<span class="acc">根本原因</span>。</p>
+      <pre class="sm"><span class="c">// 左列 → 决定玩法选型</span>
+节奏慢 · 空间立体 · 阴暗压力恐惧
+<span class="c">// 右列 → 决定架构与协作</span>
+框架稳固 · 循环清晰
+资产规范 · 面向目标的敏捷迭代</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 5 立论：为什么从意图开始 ========================= -->
+<section class="slide">
+  <h2>为什么必须<span class="acc">从意图开始</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>1. What experience do I want the player to have?<br>
+         2. What is essential to that experience?<br>
+         3. How can my game capture that essence?</p>
+      <span class="src">Jesse Schell, <em>The Art of Game Design</em> — Lens #2: The Lens of Essential Experience</span>
+    </blockquote>
+    <blockquote class="q2">
+      <p>“The game is not the experience. <strong>It is the facilitator of the experience.</strong>”<br>
+         游戏本身不是体验，它只是体验的促成者。</p>
+      <span class="src">同上，第 2 章</span>
+    </blockquote>
+    <p class="lead">整本书的<span class="acc">第二个</span>透镜就是这个 —— 位置说明了权重。</p>
+  </div>
+</section>
+
+<!-- ========================= 6 MDA 因果方向 ========================= -->
+<section class="slide">
+  <h2>MDA：两个方向<span class="acc">相反</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>“From the designer's perspective, the mechanics give rise to dynamic system behavior, which in turn leads to particular aesthetic experiences. From the player's perspective, aesthetics set the tone…”</p>
+      <span class="src">Hunicke, LeBlanc &amp; Zubek, <em>MDA: A Formal Approach to Game Design and Game Research</em>, 2004</span>
+    </blockquote>
+    <pre><span class="c">// 实现顺序</span>
+设计者：机制 <span class="k">→</span> 动态 <span class="k">→</span> 体验
+<span class="c">// 感受顺序</span>
+玩　家：体验 <span class="k">→</span> 动态 <span class="k">→</span> 机制      <span class="hl">← 反的</span></pre>
+    <p class="lead">所以设计者必须<strong>先站到玩家那一端</strong>把体验定义清楚，再倒着走回来写机制。
+       <span class="acc">这个「站过去」的动作，就是明确意图。</span></p>
+    <p class="dim">跳过它的后果不是「设计不够好」，而是<span class="bad">没有判据</span> —— 任何争论都变成比谁经验多。</p>
+  </div>
+</section>
+
+<!-- ========================= 7 意图 → 品类 ========================= -->
+<section class="slide">
+  <h2>推导方向：<span class="acc">意图 → 体验关键词 → 品类</span></h2>
+  <div class="body">
+    <pre class="sm"><span class="t">「节奏慢 + 空间立体」</span>        <span class="k">→</span> 玩家要有理由反复经过同一个地方 <span class="k">→</span> 搜刮 + 任务链
+<span class="t">「阴暗 / 压力 / 恐惧 / 紧张」</span> <span class="k">→</span> 需要持续恶化的压力源，而非一次性惊吓 <span class="k">→</span> <span class="hl">感染</span>
+<span class="t">「框架稳固 / 循环清晰」</span>      <span class="k">→</span> 系统间强耦合但模块可独立 <span class="k">→</span> 有中心变量的循环
+<span class="t">「资产规范 / 谁都可以参与」</span>   <span class="k">→</span> 内容单位必须格式化（固定字段）</pre>
+    <div class="cols">
+      <div class="card kb">
+        <h3>反向做法的下场</h3>
+        <p>先说「我要做搜打撤」→ 所有讨论变成<strong>「别人怎么做搜打撤」</strong>。</p>
+      </div>
+      <div class="card k2">
+        <h3>正向做法的收益</h3>
+        <p>先说「慢节奏立体探索 + 持续压力」→ 搜打撤是<strong>被推导出来的</strong>，可以随时被替换。</p>
+      </div>
+    </div>
+    <blockquote class="q2"><p><strong>品类是意图的解，不是前提。</strong></p></blockquote>
+  </div>
+</section>
+
+<!-- ========================= 8 约束 ========================= -->
+<section class="slide">
+  <div class="body center">
+    <blockquote>
+      <p class="big">“Restrictions breed creativity.”</p>
+      <span class="src">Mark Rosewater，《万智牌》首席设计师，<em>Making Magic</em> 专栏<br>
+      （他自己也说不确定是否原创，但由他在设计圈推广）</span>
+    </blockquote>
+    <p class="lead" style="margin-top:26px">意图是设计者给自己下的<span class="acc">第一条约束</span>。<br>
+       它不是限制想象力 —— 它是让想象力<strong>有靶子</strong>。</p>
+  </div>
+</section>
+
+<!-- ========================= 9 §2 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">2</div>
+  <h1>选<span class="acc">一个</span>核心变量<br>承载意图</h1>
+  <p>为什么是「一个」？从设计、经济、体验、工程四个角度各看一遍。</p>
+</section>
+
+<!-- ========================= 10 图02 感染六来源 ========================= -->
+<section class="slide s-fig">
+  <h2>感染 = <span class="acc">决策动作的结果</span></h2>
+  <div class="body">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145811.png"
+           data-cap="图 02 · 感染的六类来源 + 高感染收益 + 局内循环" alt="感染系统">
+      <p class="figcap">图 02 ·「感染增长来源不只是时间压力，<span class="acc">而是所有高收益行为的代价</span>」—— 六类来源全部挂在玩家主动选择的行为上</p>
+    </figure>
+  </div>
+</section>
+
+<!-- ========================= 11 六类来源 ========================= -->
+<section class="slide">
+  <h2>六类感染源，全挂在<span class="acc">主动行为</span>上</h2>
+  <div class="body">
+    <table class="sm">
+      <tr><th style="width:120px">来源</th><th>触发行为</th></tr>
+      <tr><td><strong>区域感染</strong></td><td>进入医院地下、实验室、尸潮区、孢子区</td></tr>
+      <tr><td><strong>接触感染</strong></td><td>被咬、被喷吐、踩入污染液、接触尸体样本</td></tr>
+      <tr><td><strong>战斗感染</strong></td><td>近战击杀、被血液喷溅、使用污染武器、开枪引发尸潮</td></tr>
+      <tr><td><strong>道具感染</strong></td><td>拾取病毒样本、感染器官、实验材料、高价值原液</td></tr>
+      <tr><td><strong>任务感染</strong></td><td>主动进入污染源、启动实验设备、搬运样本箱</td></tr>
+      <tr><td><strong>队友感染</strong></td><td>队友高感染产生「共队风险」：咳嗽噪声、吸引怪物、污染附近空间</td></tr>
+    </table>
+    <pre class="sm"><span class="c">// 顺序不能颠倒</span>
+<span class="k">①</span> 先定体验目的：让玩家不断评估「我还能不能继续贪」
+<span class="k">②</span> 再选一个变量承载它：<span class="hl">感染</span>
+<span class="k">③</span> 再把所有高收益行为接到这个变量上：六类感染源
+<span class="k">④</span> <span class="c">最后才是数值</span></pre>
+  </div>
+</section>
+
+<!-- ========================= 12 一次解决多个问题 ========================= -->
+<section class="slide">
+  <h2>好想法<span class="acc">一次解决多个问题</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>「アイデアというのは、複数の問題を一気に解決するものである」<br>
+         所谓好想法，是能<strong>一次性解决多个问题</strong>的东西。</p>
+      <span class="src">宫本茂 ·《超级马力欧 25 周年 社长が訊く》Vol.1（2010）</span>
+    </blockquote>
+    <p class="lead"><strong>反向使用这条判据：</strong>只解决一个问题的机制不是好想法，只是一个功能。</p>
+    <pre class="sm"><span class="c">// 感染一个变量，解决六个问题</span>
+压力来源 · 路线动机 · 资源意义 · 协作理由 · 撤离时机 · 经济锚点</pre>
+    <blockquote class="q2">
+      <p>“What are the elements of my game? What are the purposes of each element?
+         <strong>Count these up to give the element an 'elegance rating.'</strong>”</p>
+      <span class="src">Jesse Schell — Lens #43: The Lens of Elegance</span>
+    </blockquote>
+    <p>核心变量就是全项目 <span class="acc">elegance rating 最高</span>的那个元素。</p>
+  </div>
+</section>
+
+<!-- ========================= 13 主干资源 ========================= -->
+<section class="slide">
+  <h2>内部经济需要<span class="acc">一条主干资源</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>“<strong>All economies revolve around the flow of resources.</strong>”<br>
+         “Negative feedback tends to damp out effects and produce equilibrium.”<br>
+         “Positive feedback creates exponential curves.”</p>
+      <span class="src">Ernest Adams &amp; Joris Dormans, <em>Game Mechanics: Advanced Game Design</em>, 2012</span>
+    </blockquote>
+    <div class="cols">
+      <div class="card kb">
+        <h3>多变量：四条流水线</h3>
+        <p>饥饿 / 口渴 / 体温 / 理智各自成小回路，<strong>彼此不交换资源</strong>。</p>
+        <p>玩家分四次注意力 → 四个都感觉不到。</p>
+      </div>
+      <div class="card k2">
+        <h3>单变量：一块仪表盘</h3>
+        <p>所有正反馈与负反馈<strong>汇总到同一条曲线</strong>。</p>
+        <p>玩家只盯一个读数，感受到的是全部系统的合力。</p>
+      </div>
+    </div>
+    <p><span class="acc">本项目：</span>感染是唯一主干资源，抑制剂是唯一的负反馈阀门 —— 那条<strong>争夺边</strong>就长在这个阀门上。</p>
+  </div>
+</section>
+
+<!-- ========================= 14 主要因果链 ========================= -->
+<section class="slide">
+  <h2>玩家只能学<span class="acc">一条主要因果链</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>“That's what games are, in the end. Teachers.<br>
+         <strong>Fun is just another word for learning.</strong>”</p>
+      <span class="src">Raph Koster, <em>A Theory of Fun for Game Design</em>, 2004</span>
+    </blockquote>
+    <p class="lead">如果乐趣来自掌握，那么<strong>变量数量直接决定学习曲线的陡峭程度</strong>。</p>
+    <pre class="sm">四个并列变量 <span class="k">→</span> 四条要同时学的因果链 <span class="k">→</span> 学不完 <span class="k">→</span> <span class="bad">退回凭感觉玩</span>
+一条主链　　 <span class="k">→</span> 每局 / 每区域 / 每个怪都在教同一件事 <span class="k">→</span> <span class="good">反复强化</span></pre>
+    <blockquote class="q2">
+      <p><strong>Perceivable Consequence</strong>: “A clear reaction from the game world to the action of the player.”</p>
+      <span class="src">Doug Church, <em>Formal Abstract Design Tools</em>, 1999</span>
+    </blockquote>
+    <p>核心变量天然满足「可感知后果」—— 所有行为指向同一个读数。<span class="dim">分散到四个变量，每个变化都太小，后果就不可感知了。</span></p>
+  </div>
+</section>
+
+<!-- ========================= 15 解耦接口 ========================= -->
+<section class="slide">
+  <h2>核心变量是<span class="acc">模块解耦的接口</span></h2>
+  <div class="body">
+    <pre><span class="c">// 回到图 01 意图右列的「功能独立 / 循环清晰」</span>
+任务模块<span class="k">不需要</span>认识怪物模块，它们都只读写 <span class="hl">感染</span>
+怪物模块<span class="k">不需要</span>认识武器模块，它们都只读写 <span class="hl">感染</span></pre>
+    <p class="lead"><strong>核心变量就是公共总线。</strong>系统之间通过共享状态间接耦合，而不是互相调用。</p>
+    <div class="cols">
+      <div class="card"><h3>设计侧收益</h3><p>涌现的前提 —— 规则挂在同一变量上，组合自动出现。</p></div>
+      <div class="card"><h3>工程侧收益</h3><p>模块能独立开发、独立交付。技术上对应：<span class="mono acc2">感染必须是 AttributeSet，不是某个类里的 float</span>。</p></div>
+    </div>
+    <blockquote class="warn">
+      <p><strong>「加一个新变量」永远比「把新需求接到现有变量上」容易，所以它是默认失败路径。</strong><br>
+         每次有人提议加新状态值，先问：它能不能表达为现有核心变量的一个<span class="acc">来源</span>或一个<span class="acc">去处</span>？</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 16 惩罚做成收益 ========================= -->
+<section class="slide">
+  <h2>决定性的一手：把惩罚做成<span class="acc">另一种收益</span></h2>
+  <div class="split f11">
+    <div class="col">
+      <pre class="sm"><span class="c">// 图 02 右侧：高感染收益</span>
+可以感知隐藏样本
+可以看到污染痕迹
+短时间提高近战伤害
+通过某些怪物区域不被立刻攻击
+撤离后产生更高研究积分</pre>
+      <p class="figcap">这是全套设计里<span class="acc">最高级的一手</span>。</p>
+    </div>
+    <div class="col">
+      <blockquote class="warn">
+        <p><strong>纯惩罚机制不产生决策，只产生规避。</strong></p>
+      </blockquote>
+      <p>如果感染只是负债，最优策略永远是「越低越好」，<span class="bad">取舍就消失了</span>。</p>
+      <p>让高感染<strong>同时是一条 build</strong>，「贪」才有正反馈，玩家才会主动往危险里走 —— 而这正是意图里「压力、紧张」的来源。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 17 §3 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">3</div>
+  <h1>扇形展开的<span class="acc">必要性</span></h1>
+  <p>一个变量如果只有一个来源和一个去处，它不是核心变量 —— <span class="bad">它只是一个计时器。</span></p>
+</section>
+
+<!-- ========================= 18 必要性一 ========================= -->
+<section class="slide">
+  <h2>必要性一：没有展开，核心变量就只是<span class="bad">倒计时</span></h2>
+  <div class="body">
+    <p class="dim">同一个变量，两种展开度：</p>
+    <table>
+      <tr><th style="width:150px"></th><th>只有时间一个来源</th><th>六类来源都接上</th></tr>
+      <tr><td><strong>玩家的感受</strong></td><td class="bad">「我被计时器追着」</td><td class="good">「我做的每个选择都在标价」</td></tr>
+      <tr><td><strong>玩家的应对</strong></td><td class="bad">加快速度，没有选择</td><td class="good">选路线、选战法、选带什么</td></tr>
+      <tr><td><strong>设计的可能性</strong></td><td class="bad">只能调数值</td><td class="good">每类来源都是一个调节旋钮</td></tr>
+    </table>
+    <blockquote class="q2">
+      <p><strong>同一个变量，展开度决定它是「压力」还是「决策」。</strong></p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 19 必要性二三 ========================= -->
+<section class="slide">
+  <h2>必要性二、三：<span class="acc">经济成立</span>与<span class="acc">涌现体积</span></h2>
+  <div class="body">
+    <div class="cols">
+      <div class="col">
+        <h3>二 · 需要足够多的 source / drain</h3>
+        <pre class="sm"><span class="c">// Adams / Dormans 内部经济模型</span>
+source　 <span class="k">→</span> 六类感染源
+drain　　<span class="k">→</span> 抑制剂（被撤离经济争夺）
+converter <span class="k">→</span> 高感染换感知 / 研究积分</pre>
+        <p>扇形展开在工程上就是<strong>补齐 source 与 drain 的数量</strong>。数量不足 → 经济不成立 → 玩家没有可操作空间。</p>
+      </div>
+      <div class="col">
+        <h3>三 · 涌现体积 = 展开宽度</h3>
+        <blockquote class="q2">
+          <p>“…I'm trying to build the <strong>maximum possibility space in your head, not on the computer</strong>.”</p>
+          <span class="src">Will Wright，Game Studies 访谈，2001</span>
+        </blockquote>
+        <pre class="sm">3 条规则挂在感染上 <span class="k">→</span> 3 种意外局面
+10 条规则挂在感染上 <span class="k">→</span> <span class="hl">几十种</span></pre>
+        <p class="figcap">可能性空间的体积 ≈ 展开宽度的<strong>组合数</strong>，不是内容数量的加和。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 20 必要性四五 ========================= -->
+<section class="slide">
+  <h2>必要性四、五：<span class="acc">格式化</span>与<span class="acc">可裁剪</span></h2>
+  <div class="body">
+    <div class="cols">
+      <div class="card k2">
+        <h3>四 · 产出「格式化的内容单位」</h3>
+        <pre class="sm"><span class="c">// 展开的副产品是一张字段表</span>
+特殊怪：能力 / 协作反制 / 设计价值 / 适合区域
+任　务：奖励 / 代价</pre>
+        <p><strong>对人：</strong>资产规范成立 —— 意图右列「谁都可以参与」的前提。</p>
+        <p><strong>对 AI：</strong>给定格式批量补全，是它最强的能力。</p>
+      </div>
+      <div class="card">
+        <h3>五 · 只做一个扇面就能验证</h3>
+        <pre class="sm">展开时：<span class="t">八个系统与感染的关系全列出来</span>
+实现时：<span class="hl">只做任务 × 感染 × 抑制剂</span>
+其余：　<span class="c">留接口不留实现</span></pre>
+        <p>核心假设（<em>玩家会不会为了抑制剂主动往感染里走</em>）只需要这三个就能验证。</p>
+      </div>
+    </div>
+    <blockquote class="warn">
+      <p><strong>展开的完整性保证方向不错，实现的选择性保证成本可控。</strong><br>
+         只做前者 = 纸上帝国；只做后者 = 在第四个功能上撞墙。</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 21 展开总表 ========================= -->
+<section class="slide">
+  <h2>展开总表：每个系统只回答<span class="acc">一个问题</span></h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-150018.png"
+           data-cap="图 12 · 局内武器成长来源 + 区域资源倾向" alt="展开示例">
+      <p class="figcap">图 12 · 「武器」这个扇面展开后的样子</p>
+    </figure>
+    <div class="col">
+      <table class="xs">
+        <tr><th>系统</th><th>与感染的关系</th></tr>
+        <tr><td>抑制剂</td><td>唯一下调手段 + 最高价值战利品</td></tr>
+        <tr><td>任务链</td><td>递进推高感染 + 抑制剂来源</td></tr>
+        <tr><td>怪物</td><td>感染施加者 + 压力节奏器</td></tr>
+        <tr><td>武器</td><td>用不同方式规避 / 承担感染</td></tr>
+        <tr><td>道具</td><td>能力差异，部分自带感染代价</td></tr>
+        <tr><td>双人协作</td><td>感染状态差异制造分工与互救</td></tr>
+        <tr><td>地图区域</td><td>区域感染 + 资源倾向</td></tr>
+        <tr><td>撤离</td><td>结算感染收益 / 决定贪的终点</td></tr>
+      </table>
+      <p class="figcap"><span class="acc">这一步是 AI 最擅长的</span> —— 给定「核心变量 + 一个系统」，让它穷举接口。</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 22 §4 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">4</div>
+  <h1>闭环的<span class="acc">判定标准</span></h1>
+  <p>流程图能连回起点，不等于闭环。</p>
+</section>
+
+<!-- ========================= 23 闭环（自绘 SVG，非截图） =========================
+     手绘框架图：节点 + 有向边 + 边上写「这条边是什么关系」。
+     两条红色边是全套设计的张力所在（抑制剂被两种用法争夺），刻意加粗并单独图例。
+     改动方法：所有坐标在 viewBox 1120×510 内，节点用 <g class="nd">，边用 <path class="ed">。
+     ============================================================ -->
+<section class="slide">
+  <h2>完整闭环<span class="dim" style="font-size:22px;font-weight:400"> —— 八个节点，十条边</span></h2>
+  <div class="body center">
+    <svg viewBox="0 0 1120 510" style="width:100%;height:auto;max-height:520px" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#7c8ca3"/>
+        </marker>
+        <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#f87171"/>
+        </marker>
+      </defs>
+      <style>
+        .ed{fill:none;stroke:#3a4c66;stroke-width:1.6;marker-end:url(#ah)}
+        .ed.hot{stroke:#f87171;stroke-width:2.6;marker-end:url(#ahr)}
+        .el{font-size:13px;fill:#7c8ca3;font-family:"Microsoft YaHei",sans-serif}
+        .el.hot{fill:#f87171;font-weight:700}
+        .nt{font-size:19px;font-weight:700;fill:#e8edf5;text-anchor:middle;
+            font-family:"Microsoft YaHei",sans-serif;dominant-baseline:middle}
+        .nt.sm{font-size:16px}
+        .nt.big{font-size:22px}
+      </style>
+
+      <!-- ---------- 边（先画，压在节点下方） ---------- -->
+      <!-- 道具/武器 → 双人协同 -->
+      <path class="ed" d="M150,444 L150,422"/>
+      <!-- 双人协同 → 战斗 -->
+      <path class="ed" d="M150,372 L150,350"/>
+      <!-- 怪物 → 战斗 -->
+      <path class="ed" d="M214,266 L196,282"/>
+      <!-- 道具/武器 → 任务（绕左侧） -->
+      <path class="ed" d="M72,466 L34,466 L34,166 L166,166"/>
+      <!-- 任务 → 撤离收益 -->
+      <path class="ed" d="M265,140 L265,80"/>
+      <!-- 任务 → 感染抑制剂（唯一产出） -->
+      <path class="ed" d="M362,166 L704,163"/>
+      <!-- 任务 → 感染（越贪越高） -->
+      <path class="ed" d="M362,180 L412,180 L412,398 L466,398"/>
+      <!-- 感染抑制剂 → 感染：drain（争夺边 1） -->
+      <path class="ed hot" d="M800,254 L800,398 L674,398"/>
+      <!-- 感染抑制剂 → 撤离收益：source（争夺边 2） -->
+      <path class="ed hot" d="M800,70 L800,20 L265,20 L265,32"/>
+      <!-- 感染 → 战斗（绕下方） -->
+      <path class="ed" d="M570,424 L570,476 L252,476 L252,300 L216,300"/>
+
+      <!-- ---------- 边上的标注 ---------- -->
+      <text class="el" x="160" y="437">携带差异 = 分工</text>
+      <text class="el" x="160" y="365">协作反制</text>
+      <text class="el" x="222" y="290">压力节奏</text>
+      <text class="el" x="42"  y="316">解题工具</text>
+      <text class="el" x="275" y="115">阶段奖励</text>
+      <text class="el" x="470" y="152">唯一产出（source）</text>
+      <text class="el" x="422" y="300">越贪越高</text>
+      <text class="el hot" x="700" y="330">用掉 = 降感染（drain）</text>
+      <text class="el hot" x="500" y="14">带出 = 换钱（另一条经济的 source）</text>
+      <text class="el" x="300" y="468">感染改变战斗方式</text>
+
+      <!-- ---------- 节点 ---------- -->
+      <g>
+        <rect x="170" y="32" width="190" height="48" rx="6" fill="rgba(74,222,128,.14)" stroke="#4ade80" stroke-width="1.5"/>
+        <text class="nt" x="265" y="57">撤离收益</text>
+      </g>
+      <g>
+        <rect x="170" y="140" width="192" height="52" rx="6" fill="rgba(96,165,250,.14)" stroke="#60a5fa" stroke-width="1.5"/>
+        <text class="nt" x="266" y="167">任务</text>
+      </g>
+      <g>
+        <rect x="214" y="228" width="132" height="42" rx="6" fill="rgba(248,113,113,.14)" stroke="#f87171" stroke-width="1.5"/>
+        <text class="nt sm" x="280" y="250">怪物</text>
+      </g>
+      <g>
+        <path d="M150,252 L216,300 L150,348 L84,300 z" fill="rgba(45,212,191,.14)" stroke="#2dd4bf" stroke-width="1.5"/>
+        <text class="nt sm" x="150" y="301">战斗</text>
+      </g>
+      <g>
+        <rect x="72" y="372" width="156" height="46" rx="6" fill="rgba(245,165,36,.16)" stroke="#f5a524" stroke-width="1.5"/>
+        <text class="nt sm" x="150" y="396">双人协同</text>
+      </g>
+      <g>
+        <rect x="72" y="444" width="156" height="44" rx="6" fill="rgba(74,222,128,.14)" stroke="#4ade80" stroke-width="1.5"/>
+        <text class="nt sm" x="150" y="467">道具 / 武器</text>
+      </g>
+      <g>
+        <circle cx="800" cy="162" r="92" fill="rgba(167,139,250,.16)" stroke="#a78bfa" stroke-width="2"/>
+        <text class="nt big" x="800" y="152">感染抑制剂</text>
+        <text class="el" x="748" y="182">← 核心变量的闸门</text>
+      </g>
+      <g>
+        <rect x="466" y="372" width="208" height="52" rx="26" fill="rgba(251,146,60,.16)" stroke="#fb923c" stroke-width="1.8"/>
+        <text class="nt" x="570" y="399">感染</text>
+      </g>
+    </svg>
+    <p class="figcap">全套设计的张力只在<span class="bad">两条红边</span>上：抑制剂<strong>用掉</strong>就换不成钱，<strong>带出</strong>就压不住感染 —— 
+       同一份资源、两条边、互斥。<span class="dim">（自绘，对应设计素材图 18）</span></p>
+  </div>
+</section>
+
+<!-- ========================= 24 争夺边 ========================= -->
+<section class="slide">
+  <h2>判定标准：<span class="acc">同一资源被两条边争夺</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>玩家心智模型 → <strong>决策</strong> → 行动 → 系统反馈 → 更新心智模型 →（回到起点）<br>
+         “The goal of both loops and arcs is to update the player's mental model.”</p>
+      <span class="src">Daniel Cook, <em>Loops and Arcs</em>, lostgarden, 2012</span>
+    </blockquote>
+    <p>Cook 的定义里有<strong>「决策」</strong>这一环 —— 所以流程能连回起点还不够，那一环必须真的存在选择。</p>
+    <pre>边 A：抑制剂 <span class="k">→</span> 降低感染 <span class="k">→</span> 活下来 <span class="k">→</span> 能继续贪
+边 B：抑制剂 <span class="k">→</span> 带出撤离 <span class="k">→</span> 换钱　 <span class="k">→</span> 下一局更强
+<span class="hl">两条边消耗同一份资源，且互斥。</span></pre>
+    <p class="lead">机制学复述：<strong>抑制剂同时是感染经济的 drain 和撤离经济的 source。</strong></p>
+    <blockquote class="warn"><p>画完循环图，用手指<strong>指出那条争夺边</strong>。指不出来，这个循环就是假的 —— 它只是流水线。</p></blockquote>
+  </div>
+</section>
+
+<!-- ========================= 25 图05 时间规划 ========================= -->
+<section class="slide s-fig">
+  <h2>局内循环时间规划：<span class="acc">25–35 分钟</span></h2>
+  <div class="body">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145847.png"
+           data-cap="图 05 · 资源收益对比 + 局内时间规划 + 浣熊区医院四任务剧本" alt="时间规划">
+      <p class="figcap">图 05 · 第一段（0–5 分钟）必须是<span class="acc">建立安全感</span> —— 恐惧来自落差，不来自绝对值</p>
+    </figure>
+  </div>
+</section>
+
+<!-- ========================= 26 逐分钟剧本 ========================= -->
+<section class="slide">
+  <h2>抽象循环必须落成<span class="acc">一局的逐分钟剧本</span></h2>
+  <div class="body">
+    <div class="cols">
+      <div class="col">
+        <table class="xs">
+          <tr><th>时段</th><th>设计意图</th></tr>
+          <tr><td>0–5</td><td>低风险搜刮，完成第 1 个任务，<strong>建立安全感</strong></td></tr>
+          <tr><td>5–12</td><td>进入中风险区，感染明显上升，第 2 批抑制剂</td></tr>
+          <tr><td>12–20</td><td>高价值任务出现，资源紧张，<strong>队伍产生撤离分歧</strong></td></tr>
+          <tr><td>20–28</td><td>地图污染加剧，撤离点变少，怪物密度上升</td></tr>
+          <tr><td>28+</td><td>强制高压期，Boss / 尸潮推动撤离</td></tr>
+        </table>
+      </div>
+      <div class="col">
+        <pre class="sm"><span class="c">// 浣熊区医院 · 任务 4</span>
+奖励：原型抑制剂 ×1、巨额奖金
+代价：启动冷库触发警报
+　　　撤离点 <span class="hl">3 个 → 1 个</span>
+　　　净化门需等待 <span class="hl">90 秒</span></pre>
+        <blockquote class="q2">
+          <p>抽象层面自洽的循环，<strong>写成剧本时才会暴露</strong>「第 3 个任务其实没有代价」这类空洞。</p>
+        </blockquote>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 28 §5 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">5</div>
+  <h1>利弊选择<br><span class="acc">取舍是怎么被设计出来的</span></h1>
+  <p>取舍不是难度设计，是游戏的本体。</p>
+</section>
+
+<!-- ========================= 29 取舍立论 ========================= -->
+<section class="slide">
+  <h2>取舍<span class="acc">就是</span>游戏</h2>
+  <div class="body">
+    <blockquote>
+      <p>“<strong>What makes a thing into a game is the need to make decisions.</strong>”</p>
+      <span class="src">Greg Costikyan, <em>I Have No Words &amp; I Must Design</em>, 1994 / 2002</span>
+    </blockquote>
+    <div class="cols">
+      <div class="col">
+        <pre class="sm"><span class="c">// Sid Meier · GDC 2012「Interesting Decisions」</span>
+<span class="k">①</span> 没有明显最优解
+<span class="k">②</span> 存在权衡取舍
+<span class="k">③</span> 决策有持久影响
+<span class="k">④</span> 信息充分但<span class="hl">不完全</span>
+<span class="k">⑤</span> 容纳不同游戏风格</pre>
+      </div>
+      <div class="col">
+        <blockquote class="q2">
+          <p>五条判据里，<strong>④ 信息充分但不完全</strong>是最容易被做坏的一条 —— 后面讲钩子时会回到它。</p>
+        </blockquote>
+        <p>其余四条基本是设计常识，唯独这一条会被 UI 和表现层<span class="bad">无意中破坏</span>。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 30 图04 抑制剂四档 + 矛盾点 ========================= -->
+<section class="slide s-fig">
+  <h2>一物四用 + <span class="acc">六条矛盾点</span></h2>
+  <div class="body">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145834.png"
+           data-cap="图 04 · 抑制剂四档梯度 + 双人协作的六条矛盾点" alt="抑制剂梯度">
+      <p class="figcap">图 04 · 注意「浓缩抑制剂」那一档：<span class="acc">降大量感染 + 撤离价值高 = 舍不得用</span>。
+         梯度设计的目的不是「更好的药」，而是在顶端制造一个<strong>用不下去的手</strong>。</p>
+    </figure>
+  </div>
+</section>
+
+<!-- ========================= 31 取舍公式 + 负向边 ========================= -->
+<section class="slide">
+  <h2>取舍的可设计性 = <span class="acc">多义性 × 容量限制</span></h2>
+  <div class="body">
+    <pre class="sm"><span class="t">多义性</span>　　一份资源能用在两个以上互斥的地方（抑制剂 = 药 + 钱）
+<span class="t">容量限制</span>　背包格数 —— <span class="hl">所有取舍的物理载体</span>
+<span class="c">// 去掉任一项，取舍立刻消失</span>
+多义性没了 <span class="k">→</span> 只剩清单化收集　　容量无限 <span class="k">→</span> 全都带走，不用选</pre>
+    <table class="xs">
+      <tr><th style="width:90px">资源</th><th>正向</th><th>负向边</th></tr>
+      <tr><td>弹药</td><td>降低战斗风险</td><td>开枪增加噪音，<strong>间接增加感染风险</strong></td></tr>
+      <tr><td>武器</td><td>提供安全感</td><td>占背包空间，挤压抑制剂和补给</td></tr>
+      <tr><td>食物</td><td>维持体力</td><td>不吃会影响奔跑、搬运、近战</td></tr>
+      <tr><td>饮水</td><td>—</td><td>影响耐力恢复和感染恶化速度</td></tr>
+      <tr><td>医药</td><td>治疗血量</td><td><strong>不一定降低感染</strong></td></tr>
+      <tr><td>抑制剂</td><td>压制感染</td><td>有高额撤离价值（舍不得用）</td></tr>
+    </table>
+    <p class="figcap">「医药不一定降低感染」是刻意的：<span class="acc">不让两个系统共用一个解</span>，否则感染系统会被治疗系统吃掉。</p>
+  </div>
+</section>
+
+<!-- ========================= 32 减法 ========================= -->
+<section class="slide">
+  <h2>减法比加法重要：<span class="acc">武器不做耐久</span></h2>
+  <div class="body">
+    <pre class="sm"><span class="c">// 设计文档 §2.5 的判决</span>
+不加入武器耐久系统，避免<span class="hl">维护 / 维修 / 资产保值</span>抢走抑制剂的核心地位。
+战斗资源限制改为：弹药类型 + 携带量 + 弹药功能差异。</pre>
+    <p class="lead">一句设计判决，删掉了维修 / 保值 / 折旧<strong>一整套系统</strong>。</p>
+    <div class="cols">
+      <div class="col">
+        <blockquote class="q2">
+          <p>“Often, a better question is <strong>'What do I need to remove?'</strong>”</p>
+          <span class="src">Jesse Schell — Lens #43: The Lens of Elegance</span>
+        </blockquote>
+      </div>
+      <div class="col">
+        <blockquote>
+          <p>“I didn't hold back on removing and subtracting elements as needed. If something felt unfinished or unnecessary, I cut it.”</p>
+          <span class="src">上田文人，《ICO》2002 开发者访谈（shmuplations 译）</span>
+        </blockquote>
+      </div>
+    </div>
+    <blockquote class="warn">
+      <p><strong>判断一个功能要不要做，看它是否争夺核心变量的注意力。</strong>
+         耐久系统本身没问题 —— 它的问题是会变成第二套经济。</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 33 玩家会把乐趣优化掉 ========================= -->
+<section class="slide">
+  <h2>一条必须提前知道的规律</h2>
+  <div class="body center">
+    <blockquote>
+      <p class="big">“Given the opportunity, players will<br><span class="bad">optimize the fun out of a game</span>.”</p>
+      <p style="margin-top:12px">“Therefore, one of the responsibilities of the designer is to protect players from themselves.”</p>
+      <span class="src">Soren Johnson（《文明 4》主设计师），<em>GD Column 17: Water Finds a Crack</em>, 2011</span>
+    </blockquote>
+    <pre class="sm" style="margin-top:22px"><span class="c">// 「water finds a crack」—— Civilization 团队的说法：设计里任何一个缝，玩家一定会反复钻</span>
+高感染收益调太强 <span class="k">→</span> 出现「故意保持 <span class="hl">90%</span> 感染」的极限流
+抑制剂产出略多　 <span class="k">→</span> 「贪」不再有代价，<span class="bad">取舍消失</span>
+撤离惩罚偏轻　　 <span class="k">→</span> 最优策略变成「速刷第 1 个任务就撤」，<span class="bad">25 分钟节奏塌掉</span></pre>
+    <p class="lead">所以数值不是「填一下就行」，它是<span class="acc">堵缝</span> —— 这也是数值必须由人来调的原因。</p>
+  </div>
+</section>
+
+<!-- ========================= 34 §6 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">6</div>
+  <h1>钩子设计</h1>
+  <p>钩子挂在哪里才有效？答案不是「更大的奖励」。</p>
+</section>
+
+<!-- ========================= 35 图06 数值不对称 ========================= -->
+<section class="slide">
+  <h2>不对称是<span class="acc">故意的</span></h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145854.png"
+           data-cap="图 06 · 抑制剂价值 = 基础价值 × 纯度倍率 × 任务阶段倍率 × 污染风险倍率" alt="数值">
+      <p class="figcap">图 06 · 收益 <span class="acc">15 倍</span>，风险是四个「+ 一档」</p>
+    </figure>
+    <div class="col">
+      <pre class="sm">收益：<span class="hl">100 → 250 → 600 → 1500</span>
+风险：感速 +30% / 密度 +20%
+　　　撤离等待 +15s / 封锁 +1</pre>
+      <p><strong>玩家能算清收益</strong>（1500 就是 1500），<strong>算不清风险</strong>（+30% 感速到底意味着什么？）。</p>
+      <pre class="sm"><span class="c">// 命中 Meier 判据 ④</span>
+信息完全 <span class="k">→</span> 算期望值 <span class="k">→</span> <span class="bad">钩子失效</span>
+信息不足 <span class="k">→</span> 变成瞎猜 <span class="k">→</span> <span class="bad">钩子失效</span>
+<span class="hl">充分但不完全 → 有直觉没把握 → 成立</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 36 四类钩子 ========================= -->
+<section class="slide">
+  <h2>四类钩子，全部来自素材</h2>
+  <div class="body">
+    <table class="xs">
+      <tr><th style="width:110px">类型</th><th>素材原文</th><th style="width:270px">机理</th></tr>
+      <tr><td><strong class="acc">递增钩子</strong></td><td>「做到第 2 个就走？还是赌第 3 个？要不要冲第 4 个高级抑制剂？」</td><td>push your luck：收益曲线的<strong>感知斜率</strong>必须陡于风险曲线</td></tr>
+      <tr><td><strong class="acc">社交钩子</strong></td><td>「队友感染 80%，你身上有一支高级抑制剂。你是救他，还是留着撤离换高额奖金？」</td><td>挂在人际关系上 —— <strong>制作成本最低、强度最高</strong></td></tr>
+      <tr><td><strong class="acc">信息钩子</strong></td><td>「A 看到实验室门上的符号，B 在档案室看到符号对应的密码」</td><td>制造「必须交流」的时刻，<strong>交流本身就是内容</strong></td></tr>
+      <tr><td><strong class="acc">未完成钩子</strong></td><td>「撤离点从 3 个变成 1 个，净化门需要等待 90 秒」</td><td>把「结束」变成一场遭遇，<strong>取消胜利的平滑落地</strong></td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ========================= 37 损失厌恶 ========================= -->
+<section class="slide">
+  <h2>第一原则：挂在<span class="acc">「已经拥有」</span>的东西上</h2>
+  <div class="body">
+    <blockquote>
+      <p>前景理论提出<strong>损失厌恶</strong>：相对于参考点，同等幅度的损失带来的心理冲击显著大于收益带来的愉悦。后续研究给出系数约 <strong>λ ≈ 2.25</strong>。</p>
+      <span class="src">Kahneman &amp; Tversky, <em>Prospect Theory</em>, Econometrica 47(2), 1979；Tversky &amp; Kahneman, 1992</span>
+    </blockquote>
+    <table class="sm">
+      <tr><th>弱写法（收益框架）</th><th>强写法（损失框架）</th></tr>
+      <tr><td class="bad">「再做一个任务能拿 1500」</td><td class="good">「现在撤，第 4 个任务的 1500 就没了」</td></tr>
+      <tr><td class="bad">「救队友能获得协助」</td><td class="good">「队友感染 80%，你手上有药」</td></tr>
+      <tr><td class="bad">「撤离点有 3 个」</td><td class="good">「撤离点从 3 个变成 1 个」</td></tr>
+    </table>
+    <p class="lead">素材里的钩子<strong>全部是右列写法</strong>。同一个钩子，写成「失去」比写成「得到」强<span class="acc">两倍以上</span>。</p>
+  </div>
+</section>
+
+<!-- ========================= 38 §7 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">7</div>
+  <h1>用规则代替内容<br><span class="acc">新鲜感从哪来</span></h1>
+  <p>小团队只有一个选择。</p>
+</section>
+
+<!-- ========================= 39 新鲜感本质 ========================= -->
+<section class="slide">
+  <h2>新鲜感的本质：<span class="acc">还有东西可学</span></h2>
+  <div class="body">
+    <blockquote class="q2">
+      <p>“Fun is just another word for learning.” —— 当玩家不再学到新东西，新鲜感就结束了，<strong>与内容量无关</strong>。</p>
+      <span class="src">Raph Koster, <em>A Theory of Fun for Game Design</em>, 2004</span>
+    </blockquote>
+    <table class="sm">
+      <tr><th></th><th>内容型</th><th>规则型</th></tr>
+      <tr><td><strong>增加一份新鲜感的成本</strong></td><td>一个新关卡 / 新怪 / 新剧情</td><td class="good">一条新规则（可能只是一行配置）</td></tr>
+      <tr><td><strong>增长曲线</strong></td><td>线性</td><td class="good">组合（≈ 平方级）</td></tr>
+      <tr><td><strong>消耗方式</strong></td><td class="bad">一次性，看过即失效</td><td class="good">反复生效，互相叠加</td></tr>
+      <tr><td><strong>失败风险</strong></td><td>做多了做不完</td><td class="bad">规则冲突、平衡崩塌</td></tr>
+      <tr><td><strong>适合谁</strong></td><td>有产能的大团队</td><td class="acc">Demo / 小团队</td></tr>
+    </table>
+    <p class="figcap">代价要说清楚：规则型把成本<strong>从美术产能转移到了设计验证</strong>上（回到「water finds a crack」）。</p>
+  </div>
+</section>
+
+<!-- ========================= 40 图12 区域动机 ========================= -->
+<section class="slide">
+  <h2>规则生成动机，动机生成路线</h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-150018.png"
+           data-cap="图 12 · 六个区域的资源倾向：别墅区 / 医院 / 警局 / 商场 / 制药厂 / 地下实验室" alt="区域资源">
+      <p class="figcap">图 12 · 六个区域，各有资源结构</p>
+    </figure>
+    <div class="col">
+      <pre><span class="hl">我缺弹药，去警局。</span>
+<span class="hl">我缺药，去医院。</span>
+<span class="hl">我想赌高价值抑制剂，去制药厂。</span>
+<span class="hl">我想低风险补给，去别墅区。</span></pre>
+      <p class="lead">全套设计里<span class="acc">最精炼的一段</span>。</p>
+      <p>同一张地图，每局因为「缺什么」不同而走出不同路线 —— <strong>新鲜感来自缺口的随机，不来自地图的数量。</strong></p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 41 图09 携带限制 ========================= -->
+<section class="slide">
+  <h2>能力差异不来自<span class="bad">职业锁死</span>，来自<span class="acc">携带限制</span></h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-145942.png"
+           data-cap="图 09 · 入局携带六类工具 + 局内获得的六种临时道具" alt="携带限制">
+      <p class="figcap">图 09 · 入局携带 6 类 + 局内临时道具 6 种</p>
+    </figure>
+    <div class="col">
+      <pre class="sm">职业系统：3 个职业 = 3 种分工，<span class="bad">每局一样</span>
+携带系统：6 类选 2–3 件 = <span class="hl">数十种组合</span>
+　　　　　且局内道具还会再变</pre>
+      <p>而且分工是<strong>涌现</strong>的 —— 谁拿了电池组，谁就自动是「去恢复电力的那个人」，<span class="acc">不需要 UI 上标一个职业</span>。</p>
+      <pre class="sm"><span class="c">// 感染状态本身也是动态 build</span>
+低感染 <span class="k">→</span> 远程 / 解谜 / 精密操作
+中感染 <span class="k">→</span> 感知污染痕迹、找隐藏样本
+高感染 <span class="k">→</span> 近战增强、可穿污染区，<span class="bad">但易失控</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 42 §8 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">8</div>
+  <h1>玩法规则设计的<span class="acc">目的是什么</span></h1>
+  <p>不是「好玩」。「好玩」不是目的，是结果。</p>
+</section>
+
+<!-- ========================= 43 meaningful play ========================= -->
+<section class="slide">
+  <h2>目的是制造<span class="acc">有意义的决策</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>“Meaningful play occurs when the relationships between actions and outcomes in a game are both
+         <strong>discernable</strong> and <strong>integrated</strong> into the larger context of the game.”</p>
+      <span class="src">Katie Salen &amp; Eric Zimmerman, <em>Rules of Play: Game Design Fundamentals</em>, MIT Press, 2004, Ch.3</span>
+    </blockquote>
+    <table class="sm">
+      <tr><th style="width:170px">条件</th><th>含义</th><th>本项目对应</th></tr>
+      <tr><td><strong>Discernable</strong><br><span class="dim">可辨识</span></td><td>玩家能看到自己的行为产生了什么结果</td><td>感染条是唯一读数，所有行为都指向它</td></tr>
+      <tr><td><strong>Integrated</strong><br><span class="dim">已融入</span></td><td>结果持续影响后续可能性，不是孤立反馈</td><td>感染影响能力倾向、怪物追踪、撤离价值、队友风险</td></tr>
+    </table>
+    <blockquote class="warn">
+      <p><strong>「Integrated」这条是大多数系统失败的地方</strong> —— 有反馈（数字变了），但那个数字<span class="bad">不影响任何后续决策</span>。
+         于是它可辨识但未融入，玩家两局之后就不再看它。</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 44 两种意图 ========================= -->
+<section class="slide">
+  <h2>两个「意图」<span class="acc">不是一回事</span>，但是因果关系</h2>
+  <div class="body">
+    <blockquote class="q2">
+      <p><strong>Intention</strong>: “Making an implementable plan of one's own creation in response to the current situation in the game world and one's understanding of the game rules.”</p>
+      <span class="src">Doug Church, <em>Formal Abstract Design Tools</em>, 1999 —— 注意这里是<strong>玩家</strong>的意图</span>
+    </blockquote>
+    <pre>设计者意图（我要什么体验）
+　<span class="k">→</span> 规则
+　<span class="k">→</span> 玩家能形成自己的计划（Church 的 intention）
+　<span class="k">→</span> 玩家看到后果（perceivable consequence）
+　<span class="k">→</span> <span class="hl">体验产生</span></pre>
+    <p class="lead"><strong>设计者意图的成功标志，就是玩家能生成自己的意图。</strong><br>
+       玩家只能照着提示做，说明规则没给出<span class="acc">可规划的空间</span>。</p>
+    <p class="figcap">更古老的边界 —— Chris Crawford《The Art of Computer Game Design》(1984)：没有真正的交互（系统会因你而变），那只是一道谜题，不是游戏。</p>
+  </div>
+</section>
+
+<!-- ========================= 45 图16 特殊怪 ========================= -->
+<section class="slide s-fig">
+  <h2>每个特殊怪都应该对应<span class="acc">一个协作问题</span></h2>
+  <div class="body">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-150055.png"
+           data-cap="图 16 · 五个特殊怪：拖拽者 / 肿胀者 / 尖啸者 / 寄生者 / 追猎者 —— 每个都有「能力 / 协作反制 / 设计价值 / 适合区域」四栏" alt="特殊怪">
+      <p class="figcap">图 16 · 标题本身就是判据。<span class="acc">没有一栏写的是「血量 3000、攻击力 80」</span></p>
+    </figure>
+  </div>
+</section>
+
+<!-- ========================= 46 设计价值栏 ========================= -->
+<section class="slide">
+  <h2>每个内容单位必须回答：<span class="acc">我逼玩家改变哪个行为</span></h2>
+  <div class="body">
+    <table class="xs">
+      <tr><th style="width:100px">特殊怪</th><th>设计价值（原文）</th></tr>
+      <tr><td><strong>拖拽者</strong></td><td>惩罚过度分离；制造救援时机；让霰弹枪、近战、精准射击都有用途</td></tr>
+      <tr><td><strong>肿胀者</strong></td><td>让玩家不能无脑近战；让击杀位置变成决策</td></tr>
+      <tr><td><strong>尖啸者</strong></td><td>把战斗和 PvPvE 连接起来；让开门、潜行、远程观察变得有意义</td></tr>
+      <tr><td><strong>寄生者</strong></td><td>让医疗工具和抑制剂有战斗价值；让感染不只是环境 debuff，而是敌人能力的一部分</td></tr>
+      <tr><td><strong>追猎者</strong></td><td>把高价值战利品变成烫手山芋；让后期任务和撤离形成高潮</td></tr>
+    </table>
+    <blockquote class="q2">
+      <p>这一栏就是<strong>给 AI 的判据</strong> —— 写下这条规则后，AI 生成第 6 个怪时会自己补齐「设计价值」和「协作反制」，<span class="acc">而不是继续堆数值</span>。</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 47 §9 有趣 ========================= -->
+<section class="slide s-sec">
+  <div class="num">9</div>
+  <h1>什么叫<span class="acc">有趣的设计</span></h1>
+  <p>「有趣」是可以被拆解的，不是玄学 —— 所以它能被检查。</p>
+</section>
+
+<!-- ========================= 48 四条判定 ========================= -->
+<section class="slide">
+  <h2>有趣 = <span class="acc">玩家能讲出故事</span></h2>
+  <div class="body">
+    <blockquote>
+      <p class="big" style="font-size:30px">「我本来打算 X，结果因为 Y，我做了 Z。」</p>
+      <span class="src">这句话不是修辞：「本来打算」= intention 成立；「因为 Y」= perceivable consequence 成立；「我做了 Z」= integrated 成立。<strong>三条学术判据同时满足。</strong></span>
+    </blockquote>
+    <table class="xs">
+      <tr><th style="width:30px">#</th><th style="width:200px">检查项</th><th>素材证据</th><th style="width:180px">理论对应</th></tr>
+      <tr><td class="acc">①</td><td><strong>有取舍</strong>：不存在唯一最优解</td><td>抑制剂用 or 带出</td><td>Meier 判据 ①</td></tr>
+      <tr><td class="acc">②</td><td><strong>信息有代价</strong>：不免费给情报</td><td>病毒检测仪能识别高价值样本，<strong>但使用会暴露位置</strong></td><td>Meier 判据 ④</td></tr>
+      <tr><td class="acc">③</td><td><strong>失败可复述</strong>：败因是决策不是数值</td><td>「我贪了第 4 个任务」 vs 「我血少了」</td><td>Salen &amp; Zimmerman：integrated</td></tr>
+      <tr><td class="acc">④</td><td><strong>有涌现</strong>：产生设计者没写过的局面</td><td>开枪吸引尸潮 + 敌队交火 + 高感染被优先追踪</td><td>Will Wright：possibility space</td></tr>
+    </table>
+    <blockquote class="warn">
+      <p><strong>反判定：如果玩家的最优策略每局都一样，这个设计就不有趣 —— 美术再好也不行。</strong><br>
+         验收方法：找 3 个人各玩 5 局，路线和取舍<span class="bad">趋同</span> = 规则耦合不够。</p>
+    </blockquote>
+  </div>
+</section>
+
+<!-- ========================= 49 涌现可以被制造 ========================= -->
+<section class="slide">
+  <h2>涌现是可以被<span class="acc">刻意制造</span>的</h2>
+  <div class="split f57">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-150103.png"
+           data-cap="图 17 · 四组交叉绑定：怪物×武器 / 怪物×任务链 / 怪物×感染 / 战斗资源×生存资源" alt="交叉绑定">
+      <p class="figcap">图 17 · 四组交叉绑定</p>
+    </figure>
+    <div class="col">
+      <p class="lead">做法只有一条：<strong>让规则挂在同一个变量上，而不是互相调用。</strong></p>
+      <pre class="sm"><span class="c">// 素材里的涌现全部来自感染这条总线</span>
+「携带抑制剂或高感染玩家
+　更容易被追猎者发现」
+= 道具规则 × 感染规则 × 怪物 AI 规则</pre>
+      <p>如果这三条靠 <span class="mono">if-else</span> 互相调用实现，就只有设计者写过的那几种组合；<strong>挂在同一变量上，组合是自动出现的。</strong></p>
+      <blockquote class="q2"><p>这也是技术上<strong>感染必须是 AttributeSet 而不是一个 float</strong> 的原因 —— <span class="acc">设计上的涌现需求，直接决定了技术实现方式。</span></p></blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 50 §10 AI 分工 ========================= -->
+<section class="slide s-sec">
+  <div class="num">10</div>
+  <h1>回到 AI<br><span class="acc">设计阶段的人机分工</span></h1>
+  <p>AI 会展开，不会减法。</p>
+</section>
+
+<!-- ========================= 51 强弱对照 ========================= -->
+<section class="slide">
+  <h2>AI 的<span class="acc2">强</span>与<span class="bad">弱</span></h2>
+  <div class="body">
+    <div class="cols">
+      <div class="card k2">
+        <h3>极强</h3>
+        <p><strong>扇形展开</strong>：给定「感染」，穷举六类来源、六类工具、五个特殊怪、六种战斗类型</p>
+        <p><strong>对称补全</strong>：一旦确定四栏格式，后续每个怪都会自己补齐</p>
+        <p><strong>一致性检查</strong>：「哪个资源还没有负向边」</p>
+        <p><strong>给结构</strong>：<span class="mono">价值 = 基础 × 纯度 × 阶段 × 污染风险</span></p>
+      </div>
+      <div class="card kb">
+        <h3>极弱</h3>
+        <p><strong>不会做减法</strong>：「武器不做耐久」这类判决它不会主动提，倾向把每个系统都做全</p>
+        <p><strong>不会选核心变量</strong>：你说「加个生存压力」，它给你饥饿+口渴+体温+理智四个</p>
+        <p><strong>数值凭感觉</strong>：100/250/600/1500 它给得出，但斜率是否形成钩子它判断不了</p>
+        <p><strong>不会拒绝需求</strong>：包括那些会稀释核心体验的</p>
+      </div>
+    </div>
+    <pre class="sm">人：定意图 · 选核心变量（<span class="hl">只准一个</span>）· 做减法 · 调数值斜率
+AI：扇形展开 · 对称补全 · 一致性扫描 · <span class="hl">给结构不给数值</span></pre>
+  </div>
+</section>
+
+<!-- ========================= 52 判据成文 ========================= -->
+<section class="slide">
+  <div class="body center">
+    <p class="kicker">本章最重要的一句</p>
+    <p class="big">判据成文，AI 才有靶子；<br>判据在人脑里，<span class="bad">AI 每次都要重新猜。</span></p>
+    <pre class="sm" style="margin-top:26px"><span class="c">// 可以直接进设计文档的判据清单</span>
+每个资源必须有一条<span class="hl">负向边</span>。
+每个任务阶段必须有<span class="hl">奖励 + 代价</span>两栏。
+每个特殊怪必须回答：<span class="hl">它改变玩家哪个行为</span>。
+每个新系统必须回答：<span class="hl">它和核心变量是什么关系</span>。
+任何新机制若形成<span class="hl">第二套经济</span>，默认不做。</pre>
+    <p class="figcap" style="margin-top:16px">现场演示建议：把「每个特殊怪都应该对应一个协作问题」加进 prompt 前后，让 AI 各生成一个新怪，对比输出。</p>
+  </div>
+</section>
+
+<!-- ========================= 53 §11 过渡 ========================= -->
+<section class="slide s-sec">
+  <div class="num">11</div>
+  <h1>给非策划<br><span class="acc">为什么必须懂这些</span></h1>
+  <p>在 AI 参与开发之后，不懂设计的代价从「沟通成本」升级成了<span class="bad">「决策权丧失」</span>。</p>
+</section>
+
+<!-- ========================= 54 判断变贵 ========================= -->
+<section class="slide">
+  <h2>AI 把<span class="acc2">实现</span>变便宜，把<span class="acc">判断</span>变贵</h2>
+  <div class="body">
+    <pre class="sm"><span class="c">// 过去的分工建立在产能稀缺上</span>
+稀缺的是「想清楚」，也稀缺「写出来」和「跑得动」 —— 三件事分给三种人
+
+<span class="c">// AI 压掉了「写出来」这一段</span>
+实现便宜 <span class="k">→</span> 方案数量爆炸 <span class="k">→</span> 选择成本上升 <span class="k">→</span> <span class="hl">判断力成为唯一瓶颈</span></pre>
+    <div class="cols">
+      <div class="card kb">
+        <h3>只会实现</h3>
+        <p>被压缩成一个<strong>转述者</strong> —— 上游给需求，你转成 prompt，下游收代码。</p>
+      </div>
+      <div class="card k2">
+        <h3>懂设计判据</h3>
+        <p>位置变成<strong>审稿人</strong> —— 你能说出「这个方案服务不了核心体验」，<span class="acc">而这句话 AI 说不出来</span>。</p>
+      </div>
+    </div>
+    <table class="sm">
+      <tr><th>没有判据时你只能说</th><th>有判据时你可以说</th></tr>
+      <tr><td class="bad">「这个工作量太大」</td><td class="good">「这会形成第二套经济，抢走抑制剂的注意力」</td></tr>
+      <tr><td class="bad">「实现起来有点麻烦」</td><td class="good">「它的 elegance rating 只有 1」</td></tr>
+      <tr><td class="bad">「我觉得不太好玩」</td><td class="good">「玩家最优策略不变，所以它不产生决策」</td></tr>
+    </table>
+    <p class="figcap">左列是抱怨，右列是评审意见。<span class="acc">差别不在态度，在词汇。</span></p>
+  </div>
+</section>
+
+<!-- ========================= 55 技术选型=设计选型 ========================= -->
+<section class="slide">
+  <h2>技术选型其实是<span class="acc">设计选型</span></h2>
+  <div class="body">
+    <table class="xs">
+      <tr><th style="width:230px">技术决定</th><th style="width:230px">真实依据（设计判据）</th><th>不懂设计会怎么选</th></tr>
+      <tr><td><strong>感染是 AttributeSet</strong><br>不是 Character 上的 float</td><td>涌现要求规则挂在<strong>共享状态</strong>上而非互相调用</td><td class="bad">选 float —— 更简单，且涌现永远做不出来，<strong>没人知道为什么</strong></td></tr>
+      <tr><td><strong>外观/动画/音效/Cue<br>全集中在 ItemDefinition</strong></td><td>抑制剂一物四用，要同时接背包 / GAS / 结算 / 撤离</td><td class="bad">散进蓝图 —— 之后每加一个职责都要改代码</td></tr>
+      <tr><td><strong>玩家数据归 PlayerState</strong><br>而非 Controller</td><td>断线重连、死亡换 Pawn 后必须能恢复</td><td class="bad">放 Controller —— 重连后玩家资产丢失</td></tr>
+      <tr><td><strong>Spawner 只生成，<br>不决定为什么生成</strong></td><td>怪物是<strong>压力工具</strong>，投放依据是压力/感染/任务阶段</td><td class="bad">把投放写进 Spawner —— Director 层永远长不出来</td></tr>
+      <tr><td><strong>多个属性用最后一个<br>bool 触发 OnRep_</strong></td><td>感染状态是一个<strong>逻辑整体</strong>，半个状态被读到会出错误表现</td><td class="bad">各自通知 —— 客户端表现闪烁，且难复现</td></tr>
+    </table>
+    <blockquote class="warn"><p><strong>架构的每一次分层，背后都是一条设计判据。</strong>判据你不知道，分层就只是「别人说要这样」—— 你既无法维护它，也无法在它错的时候反对它。</p></blockquote>
+  </div>
+</section>
+
+<!-- ========================= 56 进度条毁钩子 ========================= -->
+<section class="slide">
+  <h2><span class="bad">一个进度条</span>就能毁掉整套钩子设计</h2>
+  <div class="body">
+    <table class="sm">
+      <tr><th style="width:150px">信息</th><th>必须的呈现方式</th><th>错误做法</th></tr>
+      <tr><td><strong>抑制剂价值</strong></td><td class="good">精确数字（1500）</td><td class="bad">用「很值钱」这类模糊描述 → 玩家算不出收益，不会贪</td></tr>
+      <tr><td><strong>感染风险</strong></td><td class="good">氛围化（画面色偏、呼吸声、视野扰动）</td><td class="bad"><strong>做成精确百分比进度条 → 玩家开始算期望值，钩子当场失效</strong></td></tr>
+    </table>
+    <p class="lead">这个决定通常<strong>不由策划做出</strong>，而且<strong>不会有人来审</strong> —— 除了懂「可精算的收益 + 模糊感知的风险」那一条的人。</p>
+    <blockquote class="q2">
+      <p><strong>设计判据不落到表现层，就等于没有。</strong>而落地这一步，做的人不是策划。</p>
+    </blockquote>
+    <pre class="sm"><span class="c">// 同类例子</span>
+装甲感染者「弱点在背部/腿部/头部缝隙」<span class="k">→</span> 造型上必须有明确的「缝」，受击反馈要能区分有效/无效
+　　　　　　　　　　　　　　　　　　　　<span class="c">否则这个怪退化成血包，设计意图在美术层被静默丢弃</span>
+感染四状态 <span class="k">→</span> 需要一条<span class="hl">可复制、可插值、可被 Cue 触发</span>的视觉参数链，且队友身上也要可读
+场景辨识度 <span class="k">→</span> 认不出那是医院，「我缺药去医院」<span class="bad">整条规则链断掉</span></pre>
+  </div>
+</section>
+
+<!-- ========================= 57 判据贡献 + 证伪 ========================= -->
+<section class="slide">
+  <h2>非策划的两个<span class="acc">不可替代</span>位置</h2>
+  <div class="body">
+    <div class="cols">
+      <div class="col">
+        <h3>一 · 往共享判据里写条目</h3>
+        <table class="xs">
+          <tr><th style="width:96px">来自哪个环节</th><th>只有这个环节能写出的判据</th></tr>
+          <tr><td class="dim">玩法设计</td><td>每个特殊怪必须对应一个协作问题</td></tr>
+          <tr><td><strong>造型与打击感</strong></td><td>设计价值必须在造型和受击反馈上可读</td></tr>
+          <tr><td><strong>信息呈现</strong></td><td>收益用精确数字，风险用氛围</td></tr>
+          <tr><td><strong>状态同步</strong></td><td>最终状态必须一致的东西显式复制</td></tr>
+          <tr><td><strong>动作衔接</strong></td><td>不用同帧状态判断异步事件</td></tr>
+        </table>
+        <p class="figcap"><span class="mono acc">AGENTS.md</span> 是全员文件。<strong>后四条策划写不出来</strong> —— 但它们同样决定设计能不能成立。条目一旦写下，AI 每次生成都遵守，收益是复利的。</p>
+      </div>
+      <div class="col">
+        <h3>二 · 能证伪 AI</h3>
+        <pre class="sm">设计知识告诉你：<span class="hl">该验证什么</span>
+技术能力告诉你：<span class="hl">怎么验证</span>
+<span class="c">两者缺一，验证都做不成</span></pre>
+        <table class="xs">
+          <tr><th>只有技术能力时验证</th><th>懂判据后验证</th></tr>
+          <tr><td class="dim">帧率、内存、有没有崩</td><td class="good">3 人各 5 局，路线取舍是否趋同</td></tr>
+          <tr><td class="dim">特效播出来了</td><td class="good">队友感染状态在<strong>独立客户端</strong>是否可读</td></tr>
+          <tr><td class="dim">数值填进表里了</td><td class="good">有没有出现「故意保持 90% 感染」的极限流</td></tr>
+        </table>
+        <blockquote class="warn"><p>在 AI 时代，<strong>能证伪输出的人，比能生成输出的人稀缺。</strong></p></blockquote>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= 58 跨职能词汇 ========================= -->
+<section class="slide">
+  <h2>这两套框架本来就是<span class="acc">为跨职能沟通造的</span></h2>
+  <div class="body">
+    <blockquote>
+      <p>“Each component of the MDA framework can be thought of as a <strong>'lens' or a 'view' of the game</strong> – separate, but causally linked.”</p>
+      <span class="src">Hunicke, LeBlanc &amp; Zubek, 2004 —— 三个视角，一套词汇</span>
+    </blockquote>
+    <blockquote class="q2">
+      <p>“The notion of 'Formal Abstract Design Tools' is an attempt to <strong>create a framework for such a vocabulary</strong> and a way to discuss design at a higher level of abstraction.”</p>
+      <span class="src">Doug Church, 1999 —— 他明确希望这套词汇帮团队在「技术实现」和「玩家体验」之间建立清晰沟通</span>
+    </blockquote>
+    <p class="lead">所以<strong>非策划学设计不是抢活</strong>，是补上那条本来就该存在的公共词汇。</p>
+    <blockquote class="warn"><p>在 AI 加入之后，这条词汇还多了一个新用途：<strong>它是唯一能让 AI 稳定对齐的接口。</strong></p></blockquote>
+  </div>
+</section>
+
+<!-- ========================= 59 收尾 ========================= -->
+<section class="slide">
+  <h2>第一维度 · 一页纸</h2>
+  <div class="body">
+    <pre class="sm"><span class="k">意图</span>　　　一切的根源。先站到玩家那端定义体验，再倒着走回来写机制。
+<span class="k">核心变量</span>　只准一个。elegance rating 最高的那个元素，也是模块解耦的总线。
+<span class="k">扇形展开</span>　每个系统只回答「我和核心变量是什么关系」。展开定方向，实现选一个扇面。
+<span class="k">闭环</span>　　　用手指指出<span class="hl">那条争夺边</span>。指不出来就是流水线。
+<span class="k">取舍</span>　　　多义性 × 容量限制。每个资源都要有一条负向边。减法比加法重要。
+<span class="k">钩子</span>　　　挂在已经拥有的东西上。收益可精算，风险要模糊。
+<span class="k">新鲜感</span>　　规则代替内容。组合成本 &lt; 线性成本。
+<span class="k">有趣</span>　　　玩家能讲出「我本来打算 X，结果因为 Y，我做了 Z」。
+<span class="k">AI</span>　　　　会展开、会补全、会扫描；<span class="bad">不会减法、不会选变量、不会判斜率</span>。
+<span class="k">非策划</span>　　判据不落到表现层就等于没有。能证伪 AI 的人最稀缺。</pre>
+    <div class="cols">
+      <div class="card"><h3>下一维度</h3><p><strong>资源</strong> —— 资产是约束条件，不是产出物。先跑起来 → 划结构性/替身 → 双向匹配 → 规范先立。</p></div>
+      <div class="card"><h3>再下一维度</h3><p><strong>组织实践</strong> —— 结构约束 / 知识约束 / 验证约束，以及一次完整的排查复盘。</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== SLIDES END ==== -->
+
+</div><!-- /deck -->
+</div><!-- /stage -->
+
+<div id="bar"></div>
+<div id="hud">1 / 1</div>
+<div id="help">← → 翻页 · ESC 概览 · F 全屏 · 点图放大 · Ctrl+P 导 PDF</div>
+
+<div id="lb"><img id="lbimg" alt=""></div>
+<div id="lbinfo"></div>
+
+<script>
+/* ============================================================
+   舞台缩放
+   ============================================================ */
+var deck=document.getElementById('deck');
+var slides=[].slice.call(document.querySelectorAll('.slide'));
+var bar=document.getElementById('bar');
+var hud=document.getElementById('hud');
+var cur=0;
+
+function fit(){
+  if(document.body.classList.contains('ov')) return;
+  var s=Math.min(window.innerWidth/1280, window.innerHeight/720);
+  deck.style.transform='scale('+s+')';
+}
+window.addEventListener('resize',fit);
+
+/* ============================================================
+   翻页
+   ============================================================ */
+function show(i,noHash){
+  i=Math.max(0,Math.min(slides.length-1,i));
+  slides[cur].classList.remove('active');
+  cur=i;
+  slides[cur].classList.add('active');
+  bar.style.width=((cur+1)/slides.length*100)+'%';
+  hud.textContent=(cur+1)+' / '+slides.length;
+  handleMedia(slides[cur]);
+  if(!noHash) history.replaceState(null,'','#'+(cur+1));
+}
+function next(){ show(cur+1) }
+function prev(){ show(cur-1) }
+
+/* ============================================================
+   视频：离开幻灯片自动暂停；带 data-autoplay 的进入时自动播
+   —— 手动加视频页时不用改这里，加 class 和属性即可（见文件末尾模板）
+   ============================================================ */
+function handleMedia(slide){
+  document.querySelectorAll('video').forEach(function(v){
+    if(!slide.contains(v)){ v.pause(); }
+  });
+  var v=slide.querySelector('video[data-autoplay]');
+  if(v){
+    v.currentTime=0;
+    var p=v.play();
+    /* 浏览器会拦截带声音的自动播放，静音视频不受限制 */
+    if(p && p.catch) p.catch(function(){});
+  }
+}
+
+/* ============================================================
+   概览网格
+   ============================================================ */
+function toggleOv(){
+  var on=document.body.classList.toggle('ov');
+  if(on){ deck.style.transform='none'; }
+  else{ fit(); slides.forEach(function(s,i){ s.classList.toggle('active', i===cur) }); }
+}
+slides.forEach(function(s,i){
+  s.addEventListener('click',function(){
+    if(document.body.classList.contains('ov')){ toggleOv(); show(i); }
+  });
+});
+
+/* ============================================================
+   灯箱：原图像素查看 + 滚轮缩放 + 拖拽平移
+   （设计图信息密度高，投屏时必须能放大到原始像素）
+   ============================================================ */
+var lb=document.getElementById('lb'), lbimg=document.getElementById('lbimg'),
+    lbinfo=document.getElementById('lbinfo');
+var z=1,ox=0,oy=0,nw=0,nh=0,drag=false,dx=0,dy=0;
+
+function isOpen(){ return lb.classList.contains('on') }
+function paint(){ lbimg.style.transform='translate('+ox+'px,'+oy+'px) scale('+z+')' }
+function center(){
+  ox=(window.innerWidth-nw*z)/2;
+  oy=(window.innerHeight-nh*z)/2-14;
+  paint();
+}
+function info(t){ lbinfo.textContent=t+'   ·   滚轮缩放 / 拖拽平移 / 双击复位 / ESC 关闭' }
+function openLb(img){
+  nw=img.naturalWidth; nh=img.naturalHeight;
+  z=Math.min(1,(window.innerWidth-60)/nw,(window.innerHeight-90)/nh);
+  lbimg.src=img.currentSrc||img.src;
+  lbimg.style.width=nw+'px'; lbimg.style.height=nh+'px';
+  lb.classList.add('on'); lbinfo.style.display='block';
+  center(); info(img.getAttribute('data-cap')||'');
+}
+function closeLb(){ lb.classList.remove('on'); lbinfo.style.display='none'; lbimg.src=''; }
+
+document.addEventListener('click',function(e){
+  var t=e.target;
+  if(t.classList && t.classList.contains('shot') && !document.body.classList.contains('ov')){
+    e.stopPropagation(); openLb(t);
+  }
+});
+lb.addEventListener('mousedown',function(e){ drag=true; dx=e.clientX-ox; dy=e.clientY-oy; lb.style.cursor='grabbing'; });
+window.addEventListener('mousemove',function(e){ if(drag){ ox=e.clientX-dx; oy=e.clientY-dy; paint(); } });
+window.addEventListener('mouseup',function(){ drag=false; lb.style.cursor='grab'; });
+lb.addEventListener('dblclick',function(){ z=Math.min(1,(window.innerWidth-60)/nw,(window.innerHeight-90)/nh); center(); });
+lb.addEventListener('wheel',function(e){
+  if(!isOpen()) return;
+  e.preventDefault();
+  var f=e.deltaY<0?1.12:1/1.12;
+  var nz=Math.max(.1,Math.min(6,z*f));
+  ox=e.clientX-(e.clientX-ox)*(nz/z);
+  oy=e.clientY-(e.clientY-oy)*(nz/z);
+  z=nz; paint();
+},{passive:false});
+
+/* ============================================================
+   键盘
+   ============================================================ */
+document.addEventListener('keydown',function(e){
+  if(isOpen()){
+    if(e.key==='Escape'){ closeLb(); e.preventDefault(); }
+    return;
+  }
+  switch(e.key){
+    case 'ArrowRight': case 'ArrowDown': case ' ': case 'PageDown': next(); e.preventDefault(); break;
+    case 'ArrowLeft': case 'ArrowUp': case 'PageUp': prev(); e.preventDefault(); break;
+    case 'Home': show(0); e.preventDefault(); break;
+    case 'End': show(slides.length-1); e.preventDefault(); break;
+    case 'Escape': toggleOv(); e.preventDefault(); break;
+    case 'f': case 'F':
+      if(document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen();
+      e.preventDefault(); break;
+  }
+});
+
+/* ============================================================
+   启动
+   ============================================================ */
+fit();
+var h=parseInt((location.hash||'#1').slice(1),10);
+show(isNaN(h)?0:h-1,true);
+</script>
+
+<!--
+================================================================
+  手动加内容的模板（复制到 <!-- ==== SLIDES END ==== --> 之前）
+================================================================
+
+【A】整页视频页 —— 进入自动播放、离开自动暂停
+     · 必须 muted，否则浏览器拦截自动播放
+     · 去掉 data-autoplay 就变成手动点播
+     · poster 给一张封面图，避免加载时黑屏
+
+<section class="slide s-vid">
+  <h2>标题 <span class="acc">强调</span></h2>
+  <div class="body">
+    <video class="clip" data-autoplay muted loop controls playsinline
+           poster="design/POPO-screenshot-20260915-145733.png">
+      <source src="design/POPO_RECORDER_20260831215202.mp4" type="video/mp4">
+    </video>
+    <p class="figcap">图注：说明这段视频在讲什么（不要写「演示视频」这种废话）</p>
+  </div>
+</section>
+
+【B】视频 + 文字分栏
+
+<section class="slide">
+  <h2>标题</h2>
+  <div class="split f57">
+    <div class="col">
+      <video class="clip" data-autoplay muted loop playsinline
+             poster="design/xxx.png">
+        <source src="design/xxx.mp4" type="video/mp4">
+      </video>
+    </div>
+    <div class="col">
+      <h3>小标题</h3>
+      <p>正文</p>
+    </div>
+  </div>
+</section>
+
+【C】整页大图（点击可放大到原始像素）
+
+<section class="slide s-fig">
+  <h2>标题</h2>
+  <div class="body">
+    <figure>
+      <img class="shot" src="design/POPO-screenshot-20260915-150110.png"
+           data-cap="灯箱底部显示的说明文字" alt="">
+      <p class="figcap">图注</p>
+    </figure>
+  </div>
+</section>
+
+【D】图文分栏（f75 = 图7:文5 / f57 = 图5:文7 / f11 = 对半）
+
+<section class="slide">
+  <h2>标题</h2>
+  <div class="split f75">
+    <figure><img class="shot" src="design/xxx.png" data-cap="" alt=""></figure>
+    <div class="col"><h3>小标题</h3><p>正文</p></div>
+  </div>
+</section>
+
+【E】四图组
+
+<section class="slide">
+  <h2>标题</h2>
+  <div class="figgrid">
+    <figure><img class="shot" src="design/a.png" data-cap="" alt=""><p class="figcap">a</p></figure>
+    <figure><img class="shot" src="design/b.png" data-cap="" alt=""><p class="figcap">b</p></figure>
+    <figure><img class="shot" src="design/c.png" data-cap="" alt=""><p class="figcap">c</p></figure>
+    <figure><img class="shot" src="design/d.png" data-cap="" alt=""><p class="figcap">d</p></figure>
+  </div>
+</section>
+
+【F】章节过渡页
+
+<section class="slide s-sec">
+  <div class="num">3</div>
+  <h1>章节标题</h1>
+  <p>一句话说明这一章要解决什么。</p>
+</section>
+
+【可用样式速查】
+  文字：.lead .big .kicker .acc .acc2 .bad .good .dim .mono
+  引用：<blockquote>（.q2 青色 / .warn 红色，用于「出处存疑」这类警告）
+  代码：<pre>（.sm 小号）内部 span：.c 注释 .k 关键字 .t 类型 .hl 高亮 .s 字符串
+  表格：<table>（.sm / .xs 更小号，行多时用）
+  布局：.cols 两列 / .cols3 三列 / .card 卡片（.k2 青 / .kb 红）
+  图片：加 class="shot" 就自动获得点击放大；data-cap 是灯箱底部说明
+
+================================================================
+-->
+
+<!-- 跟随站点的语言选择。
+     博客用 googtrans cookie（path=/，同域）记录读者选的语言，
+     但 iframe / 新标签页是独立 document，不会自动跟随，所以这里自己读一次。
+     没有该 cookie 时（本地演示、内部分享）不加载任何第三方脚本。 -->
+<script>
+(function(){
+  var SUPPORTED=['en','ja'];
+  var target='';
+  try{
+    var m=document.cookie.match('(^|;)\\s*googtrans\\s*=\\s*([^;]+)');
+    if(m) target=decodeURIComponent(m.pop()).split('/')[2]||'';
+  }catch(e){}
+  if(SUPPORTED.indexOf(target)<0) return;
+
+  /* 代码块、标识符、文件名、页码不参与翻译 */
+  var keep=document.querySelectorAll('pre,code,.mono,#hud,#help');
+  for(var i=0;i<keep.length;i++){
+    keep[i].classList.add('notranslate');
+    keep[i].setAttribute('translate','no');
+  }
+
+  var box=document.createElement('div');
+  box.id='google_translate_element';
+  document.body.appendChild(box);
+
+  window.googleTranslateElementInit=function(){
+    new google.translate.TranslateElement(
+      {pageLanguage:'zh-CN',includedLanguages:SUPPORTED.join(','),autoDisplay:false},
+      'google_translate_element'
+    );
+  };
+  var s=document.createElement('script');
+  s.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+  s.async=true;
+  document.body.appendChild(s);
+
+  /* 挂件有时会给 body 加 top 偏移，压掉它 */
+  var fix=setInterval(function(){
+    if(document.body.style.top && document.body.style.top!=='0px'){
+      document.body.style.top='0px';
+    }
+  },300);
+  setTimeout(function(){ clearInterval(fix); },8000);
+})();
+</script>
+
+</body>
+</html>
