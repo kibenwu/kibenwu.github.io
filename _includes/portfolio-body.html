@@ -357,6 +357,24 @@ body.pf-dark-page footer .fa-stack-2x {
   color: var(--pf-muted);
 }
 
+#portfolio-page .pf-item__video {
+  display: block;
+  margin: 12px 4px 0;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--pf-gold);
+  text-align: center;
+  text-decoration: none !important;
+}
+
+#portfolio-page .pf-item__video:hover,
+#portfolio-page .pf-item__video:focus {
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-item__video .fa { margin-right: 6px; }
+
 /* ---------- 联系区 ---------- */
 
 #portfolio-page .pf-contact { text-align: center; }
@@ -610,6 +628,11 @@ body.pf-dark-page footer .fa-stack-2x {
               <p class="pf-item__meta">{{ project.category }}</p>
             </div>
           </a>
+          {% if project.link %}
+          <a class="pf-item__video" href="{{ project.link | escape }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa fa-youtube-play" aria-hidden="true"></i>YouTube
+          </a>
+          {% endif %}
         </div>
         {% endunless %}
         {% endfor %}
