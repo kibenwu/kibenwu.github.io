@@ -274,14 +274,6 @@ body.pf-dark-page footer .fa-stack-2x {
   background-position: center;
 }
 
-/* 占位背景：换成真实截图时把下面每条的 background-image 改成 url('...') */
-#portfolio-page .pf-item__thumb--1 { background-image: linear-gradient(135deg, #23232f, #131318); }
-#portfolio-page .pf-item__thumb--2 { background-image: linear-gradient(135deg, #2f2622, #1a1512); }
-#portfolio-page .pf-item__thumb--3 { background-image: linear-gradient(135deg, #1a2f2f, #101d1d); }
-#portfolio-page .pf-item__thumb--4 { background-image: linear-gradient(135deg, #2a2133, #18131f); }
-#portfolio-page .pf-item__thumb--5 { background-image: linear-gradient(135deg, #222b3a, #141a22); }
-#portfolio-page .pf-item__thumb--6 { background-image: linear-gradient(135deg, #33262f, #1e161c); }
-
 /* 缩略图上的分类水印 */
 #portfolio-page .pf-item__cat {
   position: absolute;
@@ -565,83 +557,23 @@ body.pf-dark-page footer .fa-stack-2x {
       <div class="pf-head">
         <h2 class="pf-head__title">作品集</h2>
         <hr class="pf-star" />
-        <p class="pf-head__sub">Steam 独立游戏 · UE5 技术美术 · 工具链</p>
+        <p class="pf-head__sub">ゲーム開発 · テクニカルアート · VFX</p>
       </div>
 
       <div class="row">
-
+        {% for project in site.data.portfolio %}
         <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-1" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--1">
-              <span class="pf-item__cat">独立游戏</span>
+          <a class="pf-item__link" href="#pf-modal-{{ project.id }}" data-toggle="modal">
+            <div class="pf-item__thumb" style="background-image: url('{{ site.baseurl }}/img/portfolio/{{ project.image | uri_escape }}');">
+              <span class="pf-item__cat">{{ project.category }}</span>
             </div>
             <div class="pf-item__caption">
-              <h3 class="pf-item__title">Seaquest Dungeon</h3>
-              <p class="pf-item__meta">Steam 上线 · 2024</p>
+              <h3 class="pf-item__title">{{ project.title }}</h3>
+              <p class="pf-item__meta">{{ project.category }} · {{ project.year }}</p>
             </div>
           </a>
         </div>
-
-        <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-2" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--2">
-              <span class="pf-item__cat">独立游戏</span>
-            </div>
-            <div class="pf-item__caption">
-              <h3 class="pf-item__title">GridFiller</h3>
-              <p class="pf-item__meta">Steam 上线 · 2025</p>
-            </div>
-          </a>
-        </div>
-
-        <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-3" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--3">
-              <span class="pf-item__cat">技术美术</span>
-            </div>
-            <div class="pf-item__caption">
-              <h3 class="pf-item__title">UE5 GAS 战斗系统扩展</h3>
-              <p class="pf-item__meta">系统设计 · 2026</p>
-            </div>
-          </a>
-        </div>
-
-        <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-4" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--4">
-              <span class="pf-item__cat">工具链</span>
-            </div>
-            <div class="pf-item__caption">
-              <h3 class="pf-item__title">Houdini PCG 工具链</h3>
-              <p class="pf-item__meta">程序化生成 · 2025</p>
-            </div>
-          </a>
-        </div>
-
-        <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-5" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--5">
-              <span class="pf-item__cat">动画技术</span>
-            </div>
-            <div class="pf-item__caption">
-              <h3 class="pf-item__title">Motion Matching 动画系统</h3>
-              <p class="pf-item__meta">UE5 / Pose Search · 2026</p>
-            </div>
-          </a>
-        </div>
-
-        <div class="col-md-4 col-sm-6 pf-item">
-          <a class="pf-item__link" href="#pf-modal-6" data-toggle="modal">
-            <div class="pf-item__thumb pf-item__thumb--6">
-              <span class="pf-item__cat">技术研究</span>
-            </div>
-            <div class="pf-item__caption">
-              <h3 class="pf-item__title">Godot 静态光照实验</h3>
-              <p class="pf-item__meta">光照烘焙 · 2025</p>
-            </div>
-          </a>
-        </div>
-
+        {% endfor %}
       </div>
     </div>
   </section>
@@ -692,125 +624,27 @@ body.pf-dark-page footer .fa-stack-2x {
   </section>
 
   <!-- 作品详情弹窗 -->
-  <div class="modal fade pf-modal" id="pf-modal-1" tabindex="-1" role="dialog" aria-hidden="true">
+  {% for project in site.data.portfolio %}
+  <div class="modal fade pf-modal" id="pf-modal-{{ project.id }}" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
         <div class="modal-body">
-          <h3>Seaquest Dungeon</h3>
+          <h3>{{ project.title }}</h3>
           <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--1"></div>
-          <p>自研地牢探索 RPG。负责核心玩法系统、战斗手感调校与整体美术管线，已上线 Steam。</p>
+          <div class="pf-modal__thumb" style="background-image: url('{{ site.baseurl }}/img/portfolio/{{ project.image | uri_escape }}');"></div>
+          <p>{{ project.description }}</p>
           <ul class="item-details">
-            <li>类型：<strong>独立游戏</strong></li>
-            <li>角色：<strong>主程 / 技术美术</strong></li>
-            <li>年份：<strong>2024</strong></li>
+            <li>種類：<strong>{{ project.category }}</strong></li>
+            <li>役割：<strong>{{ project.role }}</strong></li>
+            <li>年：<strong>{{ project.year }}</strong></li>
           </ul>
           <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="modal fade pf-modal" id="pf-modal-2" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
-        <div class="modal-body">
-          <h3>GridFiller</h3>
-          <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--2"></div>
-          <p>网格填充解谜。负责核心玩法实现、界面交互与配套工具链，已上线 Steam。</p>
-          <ul class="item-details">
-            <li>类型：<strong>独立游戏</strong></li>
-            <li>角色：<strong>主程</strong></li>
-            <li>年份：<strong>2025</strong></li>
-          </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade pf-modal" id="pf-modal-3" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
-        <div class="modal-body">
-          <h3>UE5 GAS 战斗系统扩展</h3>
-          <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--3"></div>
-          <p>在 GameplayAbilitySystem 之上扩展 POE 风格的伤害模型与状态交互，包含属性聚合、状态堆叠与结算时序的完整设计。</p>
-          <ul class="item-details">
-            <li>类型：<strong>技术美术</strong></li>
-            <li>技术：<strong>UE5 / GAS</strong></li>
-            <li>年份：<strong>2026</strong></li>
-          </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade pf-modal" id="pf-modal-4" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
-        <div class="modal-body">
-          <h3>Houdini PCG 工具链</h3>
-          <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--4"></div>
-          <p>程序化场景生成与资产批处理管线，配套整理了一份 1800+ 行的 VEX 函数库笔记。</p>
-          <ul class="item-details">
-            <li>类型：<strong>工具链</strong></li>
-            <li>技术：<strong>Houdini / VEX</strong></li>
-            <li>年份：<strong>2025</strong></li>
-          </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade pf-modal" id="pf-modal-5" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
-        <div class="modal-body">
-          <h3>Motion Matching 动画系统</h3>
-          <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--5"></div>
-          <p>基于 GASP 5.8 拆解 Motion Matching 全流程，并实现双角色交互（MMI）的最小可行验证与自定义扩展。</p>
-          <ul class="item-details">
-            <li>类型：<strong>动画技术</strong></li>
-            <li>技术：<strong>UE5 / Pose Search</strong></li>
-            <li>年份：<strong>2026</strong></li>
-          </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal fade pf-modal" id="pf-modal-6" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="close-modal" data-dismiss="modal"><div class="lr"><div class="rl"></div></div></div>
-        <div class="modal-body">
-          <h3>Godot 静态光照实验</h3>
-          <hr class="pf-star" />
-          <div class="pf-modal__thumb pf-item__thumb--6"></div>
-          <p>LightmapGI 烘焙流程与场景打光实践，对比实时全局光照在成本与效果上的取舍。</p>
-          <ul class="item-details">
-            <li>类型：<strong>技术研究</strong></li>
-            <li>技术：<strong>Godot 4 / LightmapGI</strong></li>
-            <li>年份：<strong>2025</strong></li>
-          </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% endfor %}
 
 </div>
 
