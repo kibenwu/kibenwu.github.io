@@ -258,6 +258,19 @@ body.pf-dark-page footer .fa-stack-2x {
 
 #portfolio-page .pf-item { margin-bottom: 30px; }
 
+#portfolio-page .pf-group-title {
+  margin: 0 15px 24px;
+  font-family: 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--pf-text);
+}
+
+#portfolio-page .pf-work-divider {
+  margin: 12px 15px 42px;
+  border-top: 1px solid var(--pf-line);
+}
+
 #portfolio-page .pf-item__link {
   display: block;
   text-decoration: none !important;
@@ -560,8 +573,11 @@ body.pf-dark-page footer .fa-stack-2x {
         <p class="pf-head__sub">ゲーム開発 · テクニカルアート · VFX</p>
       </div>
 
+      <h3 class="pf-group-title">Participated &amp; Released Projects</h3>
+
       <div class="row">
         {% for project in site.data.portfolio %}
+        {% if project.year %}
         <div class="col-md-4 col-sm-6 pf-item">
           <a class="pf-item__link" href="#pf-modal-{{ project.id }}" data-toggle="modal">
             <div class="pf-item__thumb" style="background-image: url('{{ site.baseurl }}/img/portfolio/{{ project.image | uri_escape }}');">
@@ -573,6 +589,29 @@ body.pf-dark-page footer .fa-stack-2x {
             </div>
           </a>
         </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+
+      <hr class="pf-work-divider" />
+
+      <h3 class="pf-group-title">Practice Prototypes</h3>
+
+      <div class="row">
+        {% for project in site.data.portfolio %}
+        {% unless project.year %}
+        <div class="col-md-4 col-sm-6 pf-item">
+          <a class="pf-item__link" href="#pf-modal-{{ project.id }}" data-toggle="modal">
+            <div class="pf-item__thumb" style="background-image: url('{{ site.baseurl }}/img/portfolio/{{ project.image | uri_escape }}');">
+              <span class="pf-item__cat">{{ project.category }}</span>
+            </div>
+            <div class="pf-item__caption">
+              <h3 class="pf-item__title">{{ project.title }}</h3>
+              <p class="pf-item__meta">{{ project.category }}</p>
+            </div>
+          </a>
+        </div>
+        {% endunless %}
         {% endfor %}
       </div>
     </div>
