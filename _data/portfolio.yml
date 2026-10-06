@@ -5,6 +5,13 @@
   role: リードプログラマー / テクニカルアーティスト
   year: 2025年
   description: "自社開発のローグライト・ツインスティックシューター。コアとなるゲームシステム、プロシージャルダンジョン生成、戦闘感覚（手触り）の調整、および全体的なアートディレクションを担当。既にSteamにてリリース済み。"
+- id: gridfiller
+  title: GridFiller
+  image: "GridFiller.webp"
+  category: インディーゲーム（パズル）
+  role: ソロデベロッパー（フルスタック）
+  year: 2025年
+  description: "空間認識力と論理的思考を試す、200以上のハンドクラフトステージを搭載した極簡風（ミニマリスト）ブロックパズルゲーム。Godot Engineを用いた効率的なシステム実装、快適なUI/UXデザイン、サウンドシステム構築、およびSteamパブリッシングまでの全工程を単独で完遂。"
 - id: the-front
   title: The Front
   image: "The Front.webp"
