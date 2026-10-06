@@ -4,7 +4,9 @@
   - 中文（默认）不加载任何第三方脚本，零额外请求
   - 点 English / 日本語 → 写 googtrans cookie 后重载，Google 挂件接管
   - cookie 天然跨页面保持，读者切一次，后续文章沿用
-  - 首次访问且浏览器语言非中文 → 自动切到对应语言（仅一次）
+  - 首次访问根据访问者 IP 地理位置自动切语言（日本→日文，中国→中文，其他→英文）
+  - 同时保留浏览器语言检测作为 fallback
+  - 手动点击语言链接后写入 langPicked，后续不再自动切换
   - 代码块、行内代码打 notranslate，不参与翻译
 -->
 
@@ -72,6 +74,11 @@ body { top: 0 !important; position: static !important; }
   var SUPPORTED = ['en', 'ja'];
   var COOKIE = 'googtrans';
 
+  /* sessionStorage / localStorage 键名 */
+  var KEY_PICKED    = 'langPicked';       // localStorage — 用户已手动选过语言
+  var KEY_IP_TRIED  = 'langIpTried';      // sessionStorage — 本次会话已尝试过 IP 检测
+  var KEY_IP_LANG   = 'langIpResult';     // sessionStorage — IP 检测结果缓存
+
   function readCookie(name) {
     var m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
     return m ? decodeURIComponent(m.pop()) : '';
@@ -96,7 +103,7 @@ body { top: 0 !important; position: static !important; }
 
   function setLang(lang) {
     if (lang === currentLang()) return;
-    try { localStorage.setItem('langPicked', '1'); } catch (e) {}
+    try { localStorage.setItem(KEY_PICKED, '1'); } catch (e) {}
     if (lang === 'zh') {
       writeCookie(COOKIE, '');
     } else {
@@ -105,6 +112,10 @@ body { top: 0 !important; position: static !important; }
     location.reload();
   }
 
+  /*
+   * 浏览器语言检测（fallback）
+   * 返回 'ja' / 'en' / null（中文或无法判断时返回 null）
+   */
   function browserPreferred() {
     var list = navigator.languages || [navigator.language || ''];
     for (var i = 0; i < list.length; i++) {
@@ -114,6 +125,70 @@ body { top: 0 !important; position: static !important; }
       if (tag.indexOf('en') === 0) return 'en';
     }
     return null;
+  }
+
+  /*
+   * IP 地理位置检测
+   * 使用免费 API（ipapi.co），不需要 key
+   * 日本 → 'ja'，中国 → null（中文是默认语言，不需要翻译），其他 → 'en'
+   * 带 sessionStorage 缓存，同一次会话只请求一次
+   * 超时 3 秒，失败则 fallback 到浏览器语言检测
+   */
+  function detectCountryLang() {
+    return new Promise(function (resolve) {
+      /* 先查 sessionStorage 缓存 */
+      try {
+        var cached = sessionStorage.getItem(KEY_IP_LANG);
+        if (cached) {
+          resolve(cached === 'null' ? null : cached);
+          return;
+        }
+      } catch (e) {}
+
+      var done = false;
+      var timer = setTimeout(function () {
+        if (!done) { done = true; resolve(null); }
+      }, 3000);
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://ipapi.co/json/', true);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) return;
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+
+        var lang = null;
+        try {
+          if (xhr.status === 200) {
+            var data = JSON.parse(xhr.responseText);
+            var cc = (data.country_code || '').toUpperCase();
+
+            if (cc === 'JP') {
+              lang = 'ja';          // 日本 → 日文
+            } else if (cc === 'CN' || cc === 'HK' || cc === 'TW' || cc === 'MO') {
+              lang = null;          // 中国及港澳台 → 中文（默认语言，不翻译）
+            } else {
+              lang = 'en';          // 其他地区 → 英文
+            }
+
+            /* 缓存到 sessionStorage */
+            try { sessionStorage.setItem(KEY_IP_LANG, lang || 'null'); } catch (e) {}
+          }
+        } catch (e) {
+          /* JSON 解析失败，fallback 到浏览器语言 */
+          lang = browserPreferred();
+        }
+        resolve(lang);
+      };
+      xhr.onerror = function () {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(browserPreferred());
+      };
+      xhr.send();
+    });
   }
 
   function markNoTranslate() {
@@ -147,28 +222,14 @@ body { top: 0 !important; position: static !important; }
     setTimeout(function () { clearInterval(fix); }, 8000);
   }
 
-  function init() {
+  /*
+   * 渲染语言栏 + 加载翻译挂件（与 IP 检测无关的 UI 逻辑）
+   */
+  function renderBar() {
     var bar = document.getElementById('lang-bar');
     if (!bar) return;
 
     var lang = currentLang();
-
-    // 首次访问按浏览器语言自动切一次
-    if (lang === 'zh') {
-      var picked = false;
-      try { picked = !!localStorage.getItem('langPicked'); } catch (e) {}
-      var tried = false;
-      try { tried = !!sessionStorage.getItem('langAutoTried'); } catch (e) {}
-      if (!picked && !tried) {
-        try { sessionStorage.setItem('langAutoTried', '1'); } catch (e) {}
-        var guess = browserPreferred();
-        if (guess) {
-          writeCookie(COOKIE, '/' + SOURCE + '/' + guess);
-          location.reload();
-          return;
-        }
-      }
-    }
 
     var links = bar.querySelectorAll('a[data-lang]');
     for (var i = 0; i < links.length; i++) {
@@ -185,6 +246,41 @@ body { top: 0 !important; position: static !important; }
       markNoTranslate();
       loadWidget();
     }
+  }
+
+  /*
+   * 初始化主流程：
+   * 1. 如果用户已手动选过语言（localStorage 有 langPicked）→ 直接渲染，不做任何自动检测
+   * 2. 如果已设了 googtrans cookie（之前自动切过或手动切过）→ 直接渲染
+   * 3. 首次访问（无 cookie、无 langPicked）→ IP 地理位置检测 → 自动设语言
+   * 4. IP 检测失败 → fallback 到浏览器语言检测
+   */
+  function init() {
+    var lang = currentLang();
+    var picked = false;
+    try { picked = !!localStorage.getItem(KEY_PICKED); } catch (e) {}
+    var ipTried = false;
+    try { ipTried = !!sessionStorage.getItem(KEY_IP_TRIED); } catch (e) {}
+
+    /* 用户已手动选过语言，或已有翻译 cookie → 不再自动检测 */
+    if (picked || lang !== 'zh' || ipTried) {
+      renderBar();
+      return;
+    }
+
+    /* 首次访问，启动 IP 地理位置检测 */
+    try { sessionStorage.setItem(KEY_IP_TRIED, '1'); } catch (e) {}
+
+    detectCountryLang().then(function (guess) {
+      if (guess) {
+        /* 检测到需要翻译 → 写 cookie 并重载，Google 挂件接管 */
+        writeCookie(COOKIE, '/' + SOURCE + '/' + guess);
+        location.reload();
+      } else {
+        /* 检测结果为中文（中国访客）或检测失败 → 保持默认中文，直接渲染 */
+        renderBar();
+      }
+    });
   }
 
   if (document.readyState === 'loading') {
