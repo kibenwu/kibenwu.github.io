@@ -25,10 +25,7 @@ layout: default
                     {% include multilingual-sel.html %}
                 {% endif %}
 
-                <!-- Auto Translate (EN / JA) -->
-                {% unless page.no-translate %}
-                    {% include auto-translate.html %}
-                {% endunless %}
+                <!-- Auto Translate: 已移至 _layouts/default.html，全站统一引入 -->
 
 				{{ content }}
 
