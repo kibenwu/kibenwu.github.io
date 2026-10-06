@@ -54,3 +54,93 @@
   role: 3Dエフェクトデザイナー
   year: 2010年 – 2013年
   description: "次世代アクションMMORPGにおけるハイエンドなスキル・環境VFXのアウトソーシング制作。Unreal Engine 3（UE3）のCascadeを用いたパーティクル制作、マテリアル構築、および実機への実装・最適化を担当。"
+- id: tps-combat-prototype-penetration-ricochet
+  title: TPS Combat Prototype (Penetration & Ricochet)
+  image: "TPS Combat Prototype (Penetration & Ricochet).webp"
+  category: R&D / Prototype
+  role: Gameplay Programmer
+  description: "A third-person shooter prototype built entirely with Unreal Engine Blueprints (BP). Features integrated weapon swapping, weapon-type-specific firing logic, and basic combat AI. Implements physical surface detection for material-based bullet penetration and ricochet mechanics."
+- id: tps-production-refinement-asset-integration
+  title: TPS Production Refinement & Asset Integration
+  image: "TPS Production Refinement & Asset Integration.webp"
+  category: R&D / Prototype
+  role: Technical Artist
+  description: "Built upon the TPS Combat Prototype foundation, integrating marketplace art assets to overhaul the visual quality and pipeline. Refined module behaviors, shooting feedback (gamefeel), and micro-adjustments across all combat systems."
+- id: vr-optimized-pom-waterfall-shader
+  title: VR-Optimized POM Waterfall Shader
+  image: "VR-Optimized POM Waterfall Shader.webp"
+  category: Material & Shader R&D
+  role: Technical Artist
+  description: "Utilizes Parallax Occlusion Mapping (POM) in UE4 to achieve volumetric waterfall depth while keeping shader complexity low. Designed specifically for strict performance budgets in VR projects."
+- id: action-rpg-core-systems-environment-interaction
+  title: Action RPG Core Systems & Environment Interaction
+  image: "Action RPG Core Systems & Environment Interaction.webp"
+  category: R&D / System Prototype
+  role: Gameplay Programmer
+  description: "An RPG system prototype built in UE4 BP. Features realistic inventory, equipment, and weapon systems alongside environmental interactions (cutting grass, igniting vegetation). Integrates talent trees, skill systems, and item crafting."
+- id: lyra-stylized-shooter-eqs-boss-ai
+  title: Lyra-Based Stylized Shooter & EQS Boss AI
+  image: "Lyra-Based Stylized Shooter & EQS Boss AI.webp"
+  category: R&D / Bullet Hell & AI Prototype
+  role: TA / AI Programmer
+  description: "Built on UE5's Lyra architecture with stylized anime art assets. Extends Lyra's Environment Query System (EQS) to feature a 3D bullet-hell Boss pattern alongside cover-utilization and flee/evasion AI behaviors."
+- id: custom-cpp-action-system-decision-tree-boss-ai
+  title: Custom C++ Action System & Decision-Tree Boss AI
+  image: "Custom C++ Action System & Decision-Tree Boss AI.webp"
+  category: C++ Systems & AI R&D
+  role: C++ Programmer / TA
+  description: "Built around a custom lightweight C++ Action System (alternative to GAS) managing cooldowns and buffs. Implements a multi-dimensional weighted skill selection tree for Boss AI to execute optimal abilities and trigger cutscenes dynamically."
+- id: class-specific-tactical-ai-behaviors
+  title: Class-Specific Tactical AI Behaviors
+  image: "Class-Specific Tactical AI Behaviors.webp"
+  category: AI Systems R&D
+  role: AI Programmer
+  description: "Class-specific tactical combat behavior trees for Knight, Rogue, Mage, and Priest. Features knight aggressive charges, stealth/unstealth line-of-sight breaking for rogues, distance maintenance/fleeing for mages, and dynamic healing/spider-summoning for priests."
+- id: squad-based-ai-coordination-dynamic-support
+  title: Squad-Based AI Coordination & Dynamic Support
+  image: "Squad-Based AI Coordination & Dynamic Support.webp"
+  category: AI Systems R&D
+  role: AI Programmer
+  description: "Implements multi-AI squad communication and dynamic threat sharing. Injured units autonomously seek out Priest AI for healing before re-entering combat. Rogue AI waits for Knight positioning before executing coordinated flank attacks."
+- id: tag-based-skill-fusion-procedural-dungeon-pipeline
+  title: Tag-Based Skill Fusion & Procedural Dungeon Pipeline
+  image: "Tag-Based Skill Fusion & Procedural Dungeon Pipeline.webp"
+  category: PCG & Core Systems R&D
+  role: C++ Programmer / TA
+  description: "Built on a custom C++ Action System featuring gameplay tag skill fusion (e.g., Fire Light Attack + Fire Heavy Attack = New Flame Effect). Integrates modular procedural dungeon generation, dynamic enemy spawning, and probability scaling based on character stats."
+- id: event-driven-interactive-narrative-system
+  title: Event-Driven Interactive Narrative System
+  image: "Event-Driven Interactive Narrative System.webp"
+  category: Systems R&D
+  role: Gameplay Programmer
+  description: "An event-driven dialogue and narrative branching framework. Features DataTable-configured choices, event triggers, and foundational horror game pacing and interaction pipelines."
+- id: photorealistic-atmospheric-lighting-post-processing
+  title: Photorealistic Atmospheric Lighting & Post-Processing
+  image: "Photorealistic Atmospheric Lighting & Post-Processing.webp"
+  category: Graphics & Lighting R&D
+  role: Lighting Artist / TA
+  description: "Visual and atmosphere tuning for horror environments. Focuses on photorealistic dark-area lighting adjustments, post-processing stacks, and volumetric fog setup to maximize immersion and suspense."
+- id: fps-core-framework-dynamic-camera-feedback
+  title: FPS Core Framework & Dynamic Camera Feedback
+  image: "FPS Core Framework & Dynamic Camera Feedback.webp"
+  category: FPS Prototype
+  role: TA / Gameplay Programmer
+  description: "A first-person shooter framework leveraging marketplace assets. Enhances dynamic camera feedback across movement state machine transitions (walk, sprint, ADS) and refines reload animations and recoil feel."
+- id: titanfall-style-procedural-fps-movement-anim-pipeline
+  title: Titanfall-Style Procedural FPS Movement & Anim Pipeline
+  image: "Titanfall-Style Procedural FPS Movement & Anim Pipeline.webp"
+  category: Procedural Animation R&D
+  role: Animation TA / C++ Programmer
+  description: "Advanced procedural FPS animation and locomotion inspired by Titanfall. Fully drives weapon sway, ADS positioning, sliding, wall running, and grappling hook mechanics programmatically without relying on manual keyframe animations."
+- id: full-stack-gameplay-framework-gas-cpp-integration
+  title: Full-Stack Gameplay Framework (GAS & C++ Integration)
+  image: "Full-Stack Gameplay Framework (GAS & C++ Integration).webp"
+  category: C++ / GAS Full-Stack Prototype
+  role: Senior TA / C++ System Architect
+  description: "A comprehensive action framework fully integrating C++ and UE Gameplay Ability System (GAS). Features Boss AI, cutscenes, inventory, bullet hell, audio triggers, and a novel skill-unlock resource mechanic using Hanzi stroke assembly."
+- id: poe-inspired-deep-gas-framework-extension
+  title: PoE-Inspired Deep GAS Framework Extension
+  image: "PoE-Inspired Deep GAS Framework Extension.webp"
+  category: GAS Core Framework R&D
+  role: C++ System Architect
+  description: "An extended C++ Gameplay Ability System (GAS) framework inspired by Path of Exile. Features advanced Buff/Debuff lifecycle management, elemental tag mutual exclusion (Ice/Fire), and dynamic multi-tag synthesis to auto-generate secondary buffs."

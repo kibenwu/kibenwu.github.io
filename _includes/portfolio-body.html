@@ -569,7 +569,7 @@ body.pf-dark-page footer .fa-stack-2x {
             </div>
             <div class="pf-item__caption">
               <h3 class="pf-item__title">{{ project.title }}</h3>
-              <p class="pf-item__meta">{{ project.category }} · {{ project.year }}</p>
+              <p class="pf-item__meta">{{ project.category }}{% if project.year %} · {{ project.year }}{% endif %}</p>
             </div>
           </a>
         </div>
@@ -637,7 +637,7 @@ body.pf-dark-page footer .fa-stack-2x {
           <ul class="item-details">
             <li>種類：<strong>{{ project.category }}</strong></li>
             <li>役割：<strong>{{ project.role }}</strong></li>
-            <li>年：<strong>{{ project.year }}</strong></li>
+            {% if project.year %}<li>年：<strong>{{ project.year }}</strong></li>{% endif %}
           </ul>
           <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
         </div>
