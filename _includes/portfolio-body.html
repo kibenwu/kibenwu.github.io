@@ -357,7 +357,7 @@ body.pf-dark-page footer .fa-stack-2x {
   color: var(--pf-muted);
 }
 
-#portfolio-page .pf-item__video {
+#portfolio-page .pf-item__external {
   display: block;
   margin: 12px 4px 0;
   font-family: 'Montserrat', sans-serif;
@@ -368,12 +368,12 @@ body.pf-dark-page footer .fa-stack-2x {
   text-decoration: none !important;
 }
 
-#portfolio-page .pf-item__video:hover,
-#portfolio-page .pf-item__video:focus {
+#portfolio-page .pf-item__external:hover,
+#portfolio-page .pf-item__external:focus {
   color: var(--pf-text);
 }
 
-#portfolio-page .pf-item__video .fa { margin-right: 6px; }
+#portfolio-page .pf-item__external .fa { margin-right: 6px; }
 
 /* ---------- 联系区 ---------- */
 
@@ -606,6 +606,11 @@ body.pf-dark-page footer .fa-stack-2x {
               <p class="pf-item__meta">{{ project.category }}{% if project.year %} · {{ project.year }}{% endif %}</p>
             </div>
           </a>
+          {% if project.link %}
+          <a class="pf-item__external" href="{{ project.link | escape }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa fa-external-link" aria-hidden="true"></i>{{ project.link_label | default: "YouTube" }}
+          </a>
+          {% endif %}
         </div>
         {% endif %}
         {% endfor %}
@@ -629,8 +634,8 @@ body.pf-dark-page footer .fa-stack-2x {
             </div>
           </a>
           {% if project.link %}
-          <a class="pf-item__video" href="{{ project.link | escape }}" target="_blank" rel="noopener noreferrer">
-            <i class="fa fa-youtube-play" aria-hidden="true"></i>YouTube
+          <a class="pf-item__external" href="{{ project.link | escape }}" target="_blank" rel="noopener noreferrer">
+            <i class="fa fa-external-link" aria-hidden="true"></i>{{ project.link_label | default: "YouTube" }}
           </a>
           {% endif %}
         </div>

@@ -4,6 +4,8 @@
   category: インディーゲーム
   role: リードプログラマー / テクニカルアーティスト
   year: 2025年
+  link: "https://store.steampowered.com/app/3157890/SeaQuestDungeon/"
+  link_label: Steam
   description: "自社開発のローグライト・ツインスティックシューター。コアとなるゲームシステム、プロシージャルダンジョン生成、戦闘感覚（手触り）の調整、および全体的なアートディレクションを担当。既にSteamにてリリース済み。"
 - id: gridfiller
   title: GridFiller
@@ -11,6 +13,8 @@
   category: インディーゲーム（パズル）
   role: ソロデベロッパー（フルスタック）
   year: 2025年
+  link: "https://store.steampowered.com/app/3481670/GridFiller/?l=japanese&from=steamfocus"
+  link_label: Steam
   description: "空間認識力と論理的思考を試す、200以上のハンドクラフトステージを搭載した極簡風（ミニマリスト）ブロックパズルゲーム。Godot Engineを用いた効率的なシステム実装、快適なUI/UXデザイン、サウンドシステム構築、およびSteamパブリッシングまでの全工程を単独で完遂。"
 - id: the-front
   title: The Front
@@ -18,6 +22,8 @@
   category: オープンワールドサバイバルFPS
   role: シニアテクニカルアーティスト / PCGリード
   year: 2023年 – 2025年
+  link: "https://store.steampowered.com/app/2285150/The_Front/?l=tchinese"
+  link_label: Steam
   description: "36平方キロメートルに及ぶ広大なオープンワールドサバイバルFPS。Houdiniを用いた地形・植生・道路のプロシージャル生成（PCG）パイプラインをフル主導。1人称/3人称アニメーションの技術実装およびC++によるコアシステム開発を担当。"
 - id: lifeafter
   title: LifeAfter
@@ -25,6 +31,8 @@
   category: オープンワールドサバイバルRPG
   role: テクニカルアーティスト
   year: 2026年
+  link: "https://www.lifeafter.game/"
+  link_label: Official Site
   description: "大規模オープンワールド生存タイトルのPC版開発。キャラクターアニメーションにおける多武器対応フレームワークの改修・最適化を担当。操作フィードバックと手触りの徹底的な調律を行い、戦闘体験のクオリティ向上に貢献。"
 - id: timezone-arena
   title: Timezone Arena
@@ -32,6 +40,8 @@
   category: FPSバトルロイヤル
   role: アニメーションテクニカルアーティスト
   year: 2018年 – 2019年
+  link: "https://steamcommunity.com/app/987930/discussions/"
+  link_label: Community
   description: "「時間超越」ギミックを核とした革新派FPSバトルロイヤル。1人称キャラクターアニメーションの制御およびプロシージャルアニメーションの基礎研究と実機実装を担当。Steam Early Accessにて高い評価を獲得。"
 - id: ark-park
   title: ARK Park
@@ -39,6 +49,8 @@
   category: VRアドベンチャー
   role: テクニカルアーティスト
   year: 2015年 – 2018年
+  link: "https://store.steampowered.com/app/529910/ARK_Park/"
+  link_label: Steam
   description: "『ARK: Survival Evolved』的世界観をベースとしたマルチプラットフォームVRタイトル。VR特有の厳しい描画負荷をクリアするためのShader開発、ツールチェーン構築、アセットパイプライン設計およびPSVR向けのパフォーマンスチューニングを主導。"
 - id: king-of-wushu
   title: King of Wushu
@@ -46,6 +58,8 @@
   category: 3D武侠MOBA
   role: VFXシニアテクニカルアーティスト（エフェクトリード）
   year: 2013年 – 2015年
+  link: "https://www.ign.com/games/king-of-wushu"
+  link_label: IGN
   description: "中国本土PS4ローンチタイトルとなった3D武侠MOBA。CryEngine 3を用いたハイエンドな武侠スキルエフェクト（VFX）の制作・実装、および8名のエフェクトチームのクオリティ管理と業務最適化を主導。CGDA最優秀ゲームアニメーション表現賞を受賞。"
 - id: blade-and-soul
   title: Blade & Soul
@@ -53,6 +67,8 @@
   category: アクションMMORPG
   role: 3Dエフェクトデザイナー
   year: 2010年 – 2013年
+  link: "https://www.youtube.com/playlist?list=PLdzMLfeLXi0pKJ_JH-vzip9MT7D2E23ou"
+  link_label: YouTube Playlist
   description: "次世代アクションMMORPGにおけるハイエンドなスキル・環境VFXのアウトソーシング制作。Unreal Engine 3（UE3）のCascadeを用いたパーティクル制作、マテリアル構築、および実機への実装・最適化を担当。"
 - id: tps-combat-prototype-penetration-ricochet
   title: TPS Combat Prototype (Penetration & Ricochet)
