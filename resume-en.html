@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta name="robots" content="noindex, nofollow">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>Kiven Wu | Senior Technical Artist</title>
+<style>
+:root {
+  --ink: #172a3b;
+  --body: #35495a;
+  --muted: #6a7b89;
+  --line: #dbe4e8;
+  --accent: #0d887e;
+  --accent-soft: #e4f3f1;
+  --side: #f3f7f8;
+  --paper: #fff;
+}
+* { box-sizing: border-box; }
+html { background: #edf2f4; }
+body {
+  margin: 0;
+  color: var(--body);
+  background: #edf2f4;
+  font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.62;
+  letter-spacing: 0.005em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; overflow-wrap: anywhere; }
+a:hover { color: #075e57; }
+.resume {
+  width: min(1160px, calc(100% - 48px));
+  margin: 36px auto;
+  background: var(--paper);
+  border: 1px solid #e2e9ec;
+  box-shadow: 0 24px 70px rgba(22, 45, 60, 0.11);
+}
+.hero {
+  padding: 44px 58px 34px;
+  border-top: 7px solid var(--accent);
+  background: linear-gradient(115deg, #fbfdfd 0%, #f4f8f9 100%);
+}
+.eyebrow, .section-label {
+  margin: 0 0 9px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(38px, 5vw, 56px);
+  font-weight: 760;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+.role {
+  margin: 10px 0 0;
+  color: #40596a;
+  font-size: 20px;
+  font-weight: 560;
+  letter-spacing: -0.015em;
+}
+.hero-focus {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 0.025em;
+}
+.contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 22px;
+  padding-top: 15px;
+  border-top: 1px solid var(--line);
+  color: #41586a;
+  font-size: 13px;
+}
+.contact-item { white-space: normal; }
+.contact-item strong { color: var(--ink); font-weight: 650; }
+.resume-grid {
+  display: grid;
+  grid-template-columns: 278px minmax(0, 1fr);
+  grid-template-areas: "sidebar content";
+  align-items: start;
+}
+main { grid-area: content; min-width: 0; padding: 36px 54px 52px 48px; }
+aside {
+  grid-area: sidebar;
+  min-width: 0;
+  align-self: stretch;
+  padding: 36px 27px 48px 38px;
+  border-right: 1px solid var(--line);
+  background: var(--side);
+}
+section { margin: 0 0 33px; }
+section:last-child { margin-bottom: 0; }
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 17px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 760;
+  letter-spacing: 0.105em;
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+.section-heading::after {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+  content: "";
+}
+.summary {
+  margin: 0;
+  color: #33495a;
+  font-size: 15.5px;
+  line-height: 1.74;
+}
+.experience { position: relative; }
+.company {
+  position: relative;
+  margin: 0 0 25px;
+  padding-left: 19px;
+  border-left: 1px solid #c8d9dc;
+  break-inside: avoid;
+}
+.company::before {
+  position: absolute;
+  top: 5px;
+  left: -5px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  content: "";
+}
+.company-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 14px;
+  margin-bottom: 5px;
+}
+.company h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 740;
+  letter-spacing: -0.018em;
+  line-height: 1.4;
+}
+.company-date {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+.position {
+  margin: 0 0 12px;
+  color: #527080;
+  font-size: 13px;
+  font-weight: 650;
+}
+.project {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid #e6edef;
+  break-inside: avoid;
+}
+.project h4 {
+  margin: 0 0 5px;
+  color: #243e50;
+  font-size: 14px;
+  font-weight: 730;
+  line-height: 1.45;
+}
+.project-meta {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  font-weight: 580;
+  line-height: 1.5;
+}
+ul {
+  margin: 7px 0 0;
+  padding-left: 18px;
+}
+li {
+  margin: 0 0 6px;
+  padding-left: 2px;
+  color: #344b5b;
+  font-size: 13.2px;
+  line-height: 1.62;
+}
+li::marker { color: var(--accent); }
+.profile-point { margin: 0 0 15px; }
+.profile-point:last-child { margin-bottom: 0; }
+.profile-point h4 {
+  margin: 0 0 4px;
+  color: #243e50;
+  font-size: 13px;
+  font-weight: 730;
+}
+.profile-point p { margin: 0; font-size: 13px; line-height: 1.62; }
+.side-section { margin: 0 0 27px; }
+.side-section:last-child { margin-bottom: 0; }
+.side-heading {
+  margin: 0 0 12px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 780;
+  letter-spacing: 0.11em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+.focus-list, .tool-list { display: flex; flex-wrap: wrap; gap: 7px; }
+.focus, .tool {
+  display: inline-block;
+  padding: 5px 8px;
+  border: 1px solid #d4e3e4;
+  border-radius: 4px;
+  background: #fff;
+  color: #365565;
+  font-size: 11px;
+  font-weight: 630;
+  line-height: 1.35;
+}
+.skill { margin: 0 0 14px; }
+.skill:last-child { margin-bottom: 0; }
+.skill-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+  color: #233b4c;
+  font-size: 12px;
+  font-weight: 720;
+  line-height: 1.4;
+}
+.skill-years { color: var(--muted); font-size: 10px; font-weight: 600; white-space: nowrap; }
+.skill p, .side-copy { margin: 0; color: #526676; font-size: 11.8px; line-height: 1.58; }
+.education-item { margin: 0 0 12px; }
+.education-item:last-child { margin-bottom: 0; }
+.education-item strong { display: block; color: #2b4657; font-size: 11.8px; line-height: 1.45; }
+.education-item span { display: block; margin-top: 2px; color: var(--muted); font-size: 10.8px; line-height: 1.45; }
+.language { margin: 0 0 8px; color: #526676; font-size: 11.8px; line-height: 1.55; }
+.language strong { color: #2b4657; }
+@media (max-width: 850px) {
+  .resume { width: min(760px, calc(100% - 24px)); margin: 12px auto; }
+  .hero { padding: 34px 30px 28px; }
+  .resume-grid { grid-template-columns: 1fr; grid-template-areas: "content" "sidebar"; }
+  main { padding: 32px 30px 24px; }
+  aside { padding: 28px 30px 34px; border-top: 1px solid var(--line); border-right: 0; }
+  .side-section { margin-bottom: 22px; }
+}
+@media (max-width: 560px) {
+  body { font-size: 14px; }
+  .resume { width: 100%; margin: 0; border: 0; box-shadow: none; }
+  .hero { padding: 30px 22px 24px; }
+  h1 { font-size: 42px; }
+  .role { font-size: 18px; }
+  .contact-row { display: grid; grid-template-columns: 1fr; gap: 6px; }
+  main { padding: 29px 22px 20px; }
+  aside { padding: 24px 22px 30px; }
+  .company { padding-left: 15px; }
+  .company h3 { font-size: 16px; }
+  .company-date { font-size: 11px; }
+  li { font-size: 13px; }
+}
+@page { size: A4; margin: 13mm 14mm; }
+@media print {
+  html, body { background: #fff; }
+  body { font-size: 10.5pt; line-height: 1.48; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .resume { width: auto; max-width: none; margin: 0; border: 0; box-shadow: none; }
+  .hero { padding: 0 0 15px; border-top: 0; background: #fff; }
+  h1 { font-size: 31pt; }
+  .role { margin-top: 5px; font-size: 14pt; }
+  .hero-focus { margin-top: 4px; font-size: 9pt; }
+  .contact-row { margin-top: 10px; padding-top: 8px; gap: 4px 15px; font-size: 8.5pt; }
+  .resume-grid { display: grid; grid-template-columns: 1fr; grid-template-areas: "content" "sidebar"; gap: 0; }
+  main { padding: 20px 0 0; }
+  aside { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 28px; padding: 18px 0 0; border-top: 1px solid var(--line); border-right: 0; background: #fff; }
+  .side-section { margin: 0; break-inside: avoid; }
+  section { margin-bottom: 20px; }
+  .section-heading { margin-bottom: 10px; font-size: 10pt; }
+  .summary { font-size: 10pt; line-height: 1.55; }
+  .company { margin-bottom: 14px; padding-left: 14px; }
+  .company h3 { font-size: 11pt; }
+  .company-date { font-size: 8pt; }
+  .position { margin-bottom: 6px; font-size: 8.5pt; }
+  .project { margin-top: 8px; padding-top: 7px; }
+  .project h4 { font-size: 9.5pt; }
+  .project-meta { margin-bottom: 4px; font-size: 7.8pt; }
+  li { margin-bottom: 3px; font-size: 8.7pt; line-height: 1.45; }
+  .profile-point { margin-bottom: 8px; }
+  .profile-point h4, .profile-point p { font-size: 8.7pt; }
+  .side-heading { margin-bottom: 7px; font-size: 8.5pt; }
+  .skill { margin-bottom: 7px; }
+  .skill-title { font-size: 8.4pt; }
+  .skill p, .side-copy, .language { font-size: 8pt; line-height: 1.42; }
+  .education-item { margin-bottom: 7px; }
+  .education-item strong { font-size: 8pt; }
+  .education-item span { font-size: 7.6pt; }
+  .focus, .tool { padding: 3px 5px; font-size: 7.5pt; }
+  a { color: #176d67; text-decoration: none; }
+  .company, .project, .profile-point { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<article class="resume">
+  <header class="hero">
+    <p class="eyebrow">Career Profile</p>
+    <h1>Kiven Wu</h1>
+    <p class="role">Senior Technical Artist</p>
+    <p class="hero-focus">Unreal Engine · Character Animation Systems · Technical Art Pipelines</p>
+    <div class="contact-row" aria-label="Contact information">
+      <span class="contact-item"><strong>Location</strong> Fukuoka, Japan</span>
+      <span class="contact-item"><strong>Email</strong> <a href="mailto:kiben4@gmail.com">kiben4@gmail.com</a></span>
+      <span class="contact-item"><strong>Portfolio</strong> <a href="https://kibenwu.github.io/">kibenwu.github.io</a></span>
+      <span class="contact-item"><strong>Demo Reel</strong> <a href="https://www.youtube.com/watch?v=8umHcPOsCkA">YouTube</a></span>
+    </div>
+  </header>
+
+  <div class="resume-grid">
+    <main>
+      <section>
+        <h2 class="section-heading">Professional Summary</h2>
+        <p class="summary">Senior Technical Artist with 16 years of experience in game development, specializing in technical implementation and optimization with Unreal Engine and Houdini. Independently delivered work from requirements through implementation, including a procedural content generation pipeline for 36 km² of open-world terrain, custom C++ tools, and a complex animation state machine. Most recently at NetEase, validated and implemented AI-assisted workflows for game-code framework generation and automated asset mapping. I improve development efficiency and quality through practical systems that connect technical implementation with art production.</p>
+      </section>
+
+      <section class="experience">
+        <h2 class="section-heading">Professional Experience</h2>
+
+        <article class="company">
+          <div class="company-head"><h3>NetEase (Shanghai) Network Co., Ltd.</h3><span class="company-date">Dec 2025 – Sep 2026</span></div>
+          <p class="position">Technical Artist · TA / R&amp;D Lead</p>
+
+          <div class="project">
+            <h4>AI-Assisted Third-Person Survival Extraction Prototype</h4>
+            <p class="project-meta">Jun 2026 – Sep 2026 · Unreal Engine 5 · Maya · Team of 1</p>
+            <ul>
+              <li>Built an AI-assisted end-to-end workflow from design documents through testing, including automated and semi-automated production steps that brought the prototype to multiplayer synchronization testing.</li>
+              <li>Evaluated AI design and code-generation capabilities, then established a method for generating a network-ready game-code framework and API definitions.</li>
+              <li>Created a workflow to map existing animation assets to in-game State Machine actions, connecting design concepts to implementation.</li>
+              <li>Documented production standards for integrating AI into existing pipelines and shared technical findings through reports and internal sessions.</li>
+            </ul>
+          </div>
+
+          <div class="project">
+            <h4>LifeAfter · Live PC Title</h4>
+            <p class="project-meta">Apr 2026 – Jun 2026 · NeoX3 · Maya · Team of about 100</p>
+            <ul>
+              <li>Updated and optimized the character animation system and multi-weapon framework for a large live title.</li>
+              <li>Tuned motion stability, responsiveness, and control feel while working within live-game resource constraints.</li>
+              <li>Reduced animation issues and improved the framework so future weapons and motion assets could be added more efficiently.</li>
+            </ul>
+          </div>
+
+          <div class="project">
+            <h4>Unannounced PC Title · Prototype</h4>
+            <p class="project-meta">Dec 2025 – Apr 2026 · Unreal Engine · Maya · Team of about 60</p>
+            <ul>
+              <li>Designed an extensible animation system and pipeline from skeletal-rig specifications through in-game implementation.</li>
+              <li>Implemented character animation logic and a complex State Machine (AnimInstance).</li>
+              <li>Worked across design, art, and programming to balance technical constraints with visual goals and reduce rework.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="company">
+          <div class="company-head"><h3>Independent Game Development</h3><span class="company-date">Jun 2025 – Sep 2025</span></div>
+          <p class="position">Solo Developer · Godot Engine · GDScript · PC / Steam</p>
+          <div class="project">
+            <h4>SeaQuestDungeon and GridFiller</h4>
+            <ul>
+              <li>Planned, developed, and published two indie games, independently handling game design, programming, asset management, testing, and Steam publishing.</li>
+              <li><em>SeaQuestDungeon</em> is a twin-stick roguelite combining resource management, weapon and skill builds, bullet-hell combat, and procedural dungeon generation.</li>
+              <li><em>GridFiller</em> is a minimalist block puzzle with more than 200 handcrafted levels, focused on spatial reasoning, clear UI/UX, and a relaxing gameplay loop.</li>
+              <li>Delivered both games from concept to release and gained practical experience with Steam publishing requirements.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="company">
+          <div class="company-head"><h3>Suzhou 7th Element Game Co., Ltd.</h3><span class="company-date">Jun 2019 – May 2025</span></div>
+          <p class="position">Technical Artist · Unreal Engine · Houdini · Maya · C++ · Blueprint</p>
+          <div class="project">
+            <h4>The Front · Open-World Survival FPS</h4>
+            <p class="project-meta">Jun 2022 – May 2025 · PC · Team of about 150</p>
+            <ul>
+              <li>Led the Houdini Engine pipeline for procedural generation of 36 km² of terrain, vegetation, roads, and rivers, including real-time editing workflows.</li>
+              <li>Implemented first-person weapon and third-person character animation systems, including State Machine integration, IK/FK, recoil, and aim-down-sights behavior.</li>
+              <li>Built C++ and Blueprint systems for character customization, modular weapon animation blending, and seamless first-/third-person camera transitions.</li>
+              <li>Optimized terrain LODs, vegetation instances, and animation performance to support stable gameplay in a large open world.</li>
+            </ul>
+          </div>
+          <div class="project">
+            <h4>Iron Conflict · Multiplayer RTS</h4>
+            <p class="project-meta">Jun 2019 – May 2022 · PC · Team of about 80</p>
+            <ul>
+              <li>Led Houdini workflow R&amp;D for procedural terrain and level elements on small and medium maps.</li>
+              <li>Optimized materials, LODs, and client performance for dense 10v10 battles with many vehicles and units on screen.</li>
+              <li>Established procedural-generation expertise later applied to The Front’s large-scale world pipeline.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="company">
+          <div class="company-head"><h3>Snail Games Co., Ltd.</h3><span class="company-date">Apr 2013 – May 2019</span></div>
+          <p class="position">Animation Technical Artist · Senior VFX Technical Artist</p>
+          <div class="project">
+            <h4>Timezone Arena · FPS Battle Royale</h4>
+            <p class="project-meta">May 2018 – May 2019 · Unreal Engine 4 · Maya · C++ · Blueprint · Team of about 10</p>
+            <ul>
+              <li>Led the design of a time-manipulation mechanic and built a gameplay loop that heightened combat tension.</li>
+              <li>Implemented first-person character-animation controls and researched procedural animation driven by code.</li>
+              <li>After its Steam Early Access launch, the game exceeded 10,000 downloads and achieved a 70% positive review rate.</li>
+            </ul>
+          </div>
+          <div class="project">
+            <h4>ARK Park · Cross-Platform VR</h4>
+            <p class="project-meta">Jun 2015 – Apr 2018 · Unreal Engine 4 · PSVR / SteamVR / Oculus / HTC Vive · Team of about 130</p>
+            <ul>
+              <li>Evaluated UE4 rendering, physics, asset, and engine workflows, then shared best practices with the team.</li>
+              <li>Led VR performance tuning, shader development, toolchain setup, and asset-pipeline design to meet strict frame-rate demands.</li>
+              <li>Exceeded 100,000 Steam sales and received player ratings above 8/10.</li>
+            </ul>
+          </div>
+          <div class="project">
+            <h4>Nine Yang Divine Skill · 3D Wuxia MOBA</h4>
+            <p class="project-meta">Apr 2013 – May 2015 · CryEngine 3 · Maya · Project team about 160 · VFX team of 8</p>
+            <ul>
+              <li>Designed and implemented high-end martial-arts effects, materials, and shaders in CryEngine 3.</li>
+              <li>Managed quality, task allocation, and milestone delivery for an eight-person VFX team.</li>
+              <li>The title surpassed 100,000 domestic downloads during the mainland China PS4 launch period and received the 2015 Golden Ling Award and CGDA Best Game Animation Presentation Award.</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="company">
+          <div class="company-head"><h3>Shanghai Viking Technology Co., Ltd.</h3><span class="company-date">Jul 2010 – Apr 2013</span></div>
+          <p class="position">3D Effects Designer · Unreal Engine 3 · 3ds Max</p>
+          <div class="project">
+            <h4>VFX Production for High-End Games</h4>
+            <ul>
+              <li>Created high-end skill and environmental VFX for major Chinese and international PC titles, including <em>Blade &amp; Soul</em>.</li>
+              <li>Built UE3 Cascade particle effects and materials, integrated effects in-engine, and optimized them to meet demanding visual-quality and performance requirements.</li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <section>
+        <h2 class="section-heading">Professional Profile</h2>
+        <div class="profile-point"><h4>Systems thinking and long-term cost awareness</h4><p>I approach problems from first principles, examine the rationale behind requirements, and assess the long-term costs of technical decisions before proposing solutions that serve the project as a whole.</p></div>
+        <div class="profile-point"><h4>Practical technical exploration</h4><p>I test new technologies and integrate them when they solve production challenges. I see technical art as a means of improving the player experience and the team’s ability to create it.</p></div>
+        <div class="profile-point"><h4>Support for creators</h4><p>I design clear technical constraints, frameworks, and tools that reduce friction and help artists focus on their strongest work.</p></div>
+      </section>
+    </main>
+
+    <aside>
+      <section class="side-section">
+        <h2 class="side-heading">Focus Areas</h2>
+        <div class="focus-list"><span class="focus">Animation TA</span><span class="focus">UE4 / UE5</span><span class="focus">Character Systems</span><span class="focus">Tools &amp; Pipelines</span><span class="focus">Procedural Content</span><span class="focus">Performance</span></div>
+      </section>
+
+      <section class="side-section">
+        <h2 class="side-heading">Core Skills</h2>
+        <div class="skill"><div class="skill-title"><span>Unreal Engine 4/5</span><span class="skill-years">10+ years</span></div><p>Animation Blueprints, materials, lighting, VFX, particles, widgets, engine integration, graphics and performance optimization.</p></div>
+        <div class="skill"><div class="skill-title"><span>Unreal Engine C++</span><span class="skill-years">3+ years</span></div><p>Character control, AI and gameplay-system foundations, custom tools and plugins.</p></div>
+        <div class="skill"><div class="skill-title"><span>Houdini / Houdini Engine</span><span class="skill-years">3+ years</span></div><p>Procedural terrain, vegetation, roads, rivers, and world-building pipelines.</p></div>
+        <div class="skill"><div class="skill-title"><span>Generative AI &amp; Python</span><span class="skill-years">1+ year</span></div><p>LLM-assisted workflows, Unreal Editor automation, and batch-processing tools.</p></div>
+        <div class="skill"><div class="skill-title"><span>VFX &amp; Particle Systems</span><span class="skill-years">6+ years</span></div><p>Real-time effects, shaders, materials, quality control, and team support.</p></div>
+        <div class="skill"><div class="skill-title"><span>Godot / GDScript</span><span class="skill-years">2+ years</span></div><p>Game systems, UI, full-cycle solo development, and Steam publishing.</p></div>
+      </section>
+
+      <section class="side-section">
+        <h2 class="side-heading">Tools &amp; Technology</h2>
+        <p class="side-copy"><strong>Engines</strong><br>Unreal Engine 4/5, Godot, NeoX3, CryEngine</p>
+        <p class="side-copy" style="margin-top:9px"><strong>Art &amp; DCC</strong><br>Houdini, Maya, 3ds Max, Blender, Photoshop, After Effects</p>
+        <p class="side-copy" style="margin-top:9px"><strong>Code</strong><br>C++, Blueprint, Python, GDScript, VEX</p>
+        <p class="side-copy" style="margin-top:9px"><strong>Version Control</strong><br>GitHub, TortoiseSVN</p>
+      </section>
+
+      <section class="side-section">
+        <h2 class="side-heading">Education</h2>
+        <div class="education-item"><strong>Beijing Normal University</strong><span>Adult Higher Education · Film and Animation · 2007–2009</span></div>
+        <div class="education-item"><strong>Shanghai University Adult Education College</strong><span>Game Programming · 2009–2010</span></div>
+        <div class="education-item"><strong>Fukuoka YMCA Japanese Language School</strong><span>Enrolled October 2026</span></div>
+      </section>
+
+      <section class="side-section">
+        <h2 class="side-heading">Language</h2>
+        <p class="language"><strong>Japanese</strong><br>Currently studying · JPT 515 (approximately JLPT N3 equivalent, as listed in the source résumé)</p>
+      </section>
+    </aside>
+  </div>
+</article>
+</body>
+</html>
