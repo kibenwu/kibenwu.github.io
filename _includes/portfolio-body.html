@@ -700,13 +700,13 @@ body.pf-dark-page footer .fa-stack-2x {
           <h3>{{ project.title }}</h3>
           <hr class="pf-star" />
           <div class="pf-modal__thumb" style="background-image: url('{{ site.baseurl }}/img/portfolio/{{ project.image | uri_escape }}');"></div>
-          <p>{{ project.description }}</p>
+          <div class="pf-modal__description">{{ project.description | markdownify }}</div>
           <ul class="item-details">
-            <li>種類：<strong>{{ project.category }}</strong></li>
-            <li>役割：<strong>{{ project.role }}</strong></li>
-            {% if project.year %}<li>年：<strong>{{ project.year }}</strong></li>{% endif %}
+            <li>Category: <strong>{{ project.category }}</strong></li>
+            <li>Role: <strong>{{ project.role }}</strong></li>
+            {% if project.year %}<li>Year: <strong>{{ project.year | replace: '年', '' }}</strong></li>{% endif %}
           </ul>
-          <button type="button" class="pf-modal__close" data-dismiss="modal">关闭</button>
+          <button type="button" class="pf-modal__close" data-dismiss="modal">Close</button>
         </div>
       </div>
     </div>

@@ -1,34 +1,23 @@
 - id: seaquest-dungeon
   title: SeaQuestDungeon
   image: "SeaQuestDungeon.webp"
-  category: インディーゲーム
+  category: Indie Game
   card_category: Indie Game
-  role: リードプログラマー / テクニカルアーティスト
-  year: 2025年
+  role: Lead Programmer / Technical Artist
+  year: 2025
   link: "https://store.steampowered.com/app/3157890/SeaQuestDungeon/"
   link_label: Steam
-  description: |
-    ### 1. SeaQuestDungeon
-
-    > **Overview**
-    >
-    > Independently developed and published rogue-lite twin-stick shooter on Steam. **Architected** the core gameplay framework, **engineered** procedural dungeon generation, **tuned** combat gamefeel/responsiveness, and **directed** the overall technical art direction.
-    >
-    > **Category**: Indie Game
-    >
-    > **Role**: Lead Programmer / Technical Artist
-    >
-    > **Year**: 2025
+  description: "An independently developed roguelite twin-stick shooter, published on Steam. Designed and built the core gameplay framework and procedural dungeon generation, refined combat feel and responsiveness, and led the game's technical art direction."
 - id: gridfiller
   title: GridFiller
   image: "GridFiller.webp"
-  category: インディーゲーム（パズル）
+  category: Indie Puzzle Game
   card_category: Indie Puzzle Game
-  role: ソロデベロッパー（フルスタック）
-  year: 2025年
+  role: Solo Developer (Full Stack)
+  year: 2025
   link: "https://store.steampowered.com/app/3481670/GridFiller/?l=japanese&from=steamfocus"
   link_label: Steam
-  description: "空間認識力と論理的思考を試す、200以上のハンドクラフトステージを搭載した極簡風（ミニマリスト）ブロックパズルゲーム。Godot Engineを用いた効率的なシステム実装、快適なUI/UXデザイン、サウンドシステム構築、およびSteamパブリッシングまでの全工程を単独で完遂。"
+  description: "A minimalist block puzzle game that tests spatial reasoning and logical thinking across 200+ handcrafted levels. Independently built the game in Godot, including its systems, UI/UX, and audio, and published it on Steam."
 - id: the-front
   title: The Front
   image: "The Front.webp"
