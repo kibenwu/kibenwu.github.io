@@ -2,6 +2,7 @@
 layout: redirect
 redirect_to: /slides/design-dimension-intent-to-loop.html?v=20260918
 title: 设计维度：从意图到闭环（幻灯片）
+published: false
 subtitle: 58 页 · 一句意图怎么长成一个玩法循环，以及 AI 在这条链上的边界
 author: KivenWu
 header-style: text

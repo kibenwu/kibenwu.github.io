@@ -1,6 +1,6 @@
 ---
 layout: post
-title: 用 AI 构建系统性工程（正文版）
+title: 用 AI 构建系统性工程
 subtitle: 瓶颈不是生成能力，是约束供给：结构 / 知识 / 验证三层约束
 author: KivenWu
 header-style: text
